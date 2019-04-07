@@ -1,0 +1,16 @@
+mount=workdir:
+  bind: .
+  path: /app
+mount=dockercli:
+  bind: /usr/bin/docker
+  path: /usr/bin/docker
+image=dev:
+  image: image-dev
+  context: .
+  dockerfile: dev.Dockerfile
+
+job=shell:
+  use: dev
+  interactive: true
+  provide-docker: true
+  mounts: [workdir, dockercli]
