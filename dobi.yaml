@@ -8,7 +8,13 @@ image=dev:
   image: image-dev
   context: .
   dockerfile: dev.Dockerfile
-
+image=ci:
+  image: image-ci
+  context: .
+  dockerfile: test.Dockerfile
+job=test:
+  use: ci
+  interactive: true
 job=shell:
   use: dev
   interactive: true
