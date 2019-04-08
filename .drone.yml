@@ -1,7 +1,7 @@
 pipeline:
   test:
-    image: docker:dind
-    privileged: true
+    image: plugins/docker
+      image: agenttestdocker
+      dry_run: true
     commands:
-      - docker build --registry-mirror=https://registry.docker-cn.com -t agenttestdocker .
       - docker run --rm agenttestdocker
