@@ -2,4 +2,7 @@ pipeline:
   test:
     image: plugins/docker
     dry_run: true
+    repo: worknet/agent
     dockerfile: test.Dockerfile
+    registry: 10.76.1.125:25000
+    insecure: true
