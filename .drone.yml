@@ -1,7 +1,4 @@
 pipeline:
   test:
     image: plugins/docker
-      image: agenttestdocker
-      dry_run: true
-    commands:
-      - docker run --rm agenttestdocker
+    dry_run: true
