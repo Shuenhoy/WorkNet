@@ -2,3 +2,4 @@ pipeline:
   test:
     image: plugins/docker
     dry_run: true
+    dockerfile: test.Dockerfile
