@@ -6,6 +6,4 @@ WORKDIR /app
 RUN pipenv install --system
 COPY . /app
 
-
-
-CMD  ["coala", "--non-interactive"]
+RUN coala --non-interactive
