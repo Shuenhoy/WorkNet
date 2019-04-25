@@ -25,7 +25,9 @@ async def post(url: str, data=None,params=None,headers=None):
             "html": html,
             "url": url,
         }
-
+async def fetch_stream(url: str, params:dict=None):
+    async with app.session.get(url,params=params) as response:
+        return response
 async def fetchs(url: str, params:dict=None):
     async with app.session.get(url,params=params) as response:
         html = await response.read()
@@ -36,36 +38,84 @@ async def fetchs(url: str, params:dict=None):
             "html": html,
             "url": url,
         }
-@app.route('/file/<path:namespace>:<id>', methods=['PATCH'])
-async def patch_file(namespace,id):
-    input = await request.get_json()
-    exist = await app.read_only_db.fetchrow('SELECT * from api.files where id=$1 and namespace=$2',int(id),namespace)
+@app.route('/file/<path:namespace>:<path:filename>', methods=['PATCH'])
+async def patch_file_name(namespace,filename):
+    
+    input = await request.get_json(force=True)
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
     if exist==None:
-        return '"{}:{}" not exists'.format(namespace,id), 400
+        return '"`{}:{}` not exists"'.format(namespace,filename), 400
     origin = dict(exist)
     new_tags = input.get('tags') or []
     new_meta = input.get('meta') or {}
     old_tags = origin.get('tags') or []
     old_meta = origin.get('meta') or {}
 
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2',
-        json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))))
-    return "ok"
+    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where filename=$3 and namespace=$4',
+        json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),FileNotFoundError,namespace)
+    return '"ok"'
 
-
-@app.route('/file/<path:namespace>:<id>', methods=['PUT'])
-async def put_file(namespace,id):
-    input = await request.get_json()
-    exist = await app.read_only_db.fetchrow('SELECT id from api.files where id=$1 and namespace=$2',int(id),namespace)
+@app.route('/file/<path:namespace>:<path:filename>', methods=['GET'])
+async def get_file_by_name(namespace,filename):
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
     if exist==None:
-        return '"{}:{}" not exists'.format(namespace,id), 400
+        return '"`{}:{}` not exists"'.format(namespace,filename), 400
+    origin = dict(exist)
+    resp = await fetch_stream('http://volume:18080/{}'.format(origin['seaweedid']))
+    return resp.content, resp.status, resp.headers
+
+@app.route('/file/<path:namespace>::<int:id>', methods=['PATCH'])
+async def patch_file_id(namespace,id):
+    try:
+        id = int(id)
+    except:
+        return '"should provide id of int type"',400
+    input = await request.get_json(force=True)
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where id=$1 and namespace=$2',id,namespace)
+    if exist==None:
+        return '"`{}::{}` not exists"'.format(namespace,id), 400
     origin = dict(exist)
     new_tags = input.get('tags') or []
     new_meta = input.get('meta') or {}
+    old_tags = origin.get('tags') or []
+    old_meta = origin.get('meta') or {}
 
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2',
-        json.dumps(new_meta),new_tags)
-    return "ok"
+    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where id=$3 and namespace=$4',
+        json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),id,namespace)
+    return '"ok"'
+
+@app.route('/file/<path:namespace>:<path:filename>', methods=['PUT'])
+async def put_file_filename(namespace,filename):
+
+    input = await request.get_json(force=True)
+    exist = await app.read_only_db.fetchrow('SELECT id from api.files where filename=$1 and namespace=$2',filename,namespace)
+    if exist==None:
+        return '"`{}:{}` not exists"'.format(namespace,id), 400
+    origin = dict(exist)
+    new_tags = input.get('tags') or  origin.get('tags')  or []
+    new_meta = input.get('meta') or origin.get('meat') or {}
+
+    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where filename=$1 and namespace=$2',
+        json.dumps(new_meta),new_tags,filename,namespace)
+    return '"ok"'
+
+@app.route('/file/<path:namespace>::<int:id>', methods=['PUT'])
+async def put_file_id(namespace,id):
+    try:
+        id = int(id)
+    except:
+        return '"should provide id of int type"',400
+    input = await request.get_json(force=True)
+    exist = await app.read_only_db.fetchrow('SELECT id from api.files where id=$1 and namespace=$2',id,namespace)
+    if exist==None:
+        return '"`{}:{}` not exists"'.format(namespace,id), 400
+    origin = dict(exist)
+    new_tags = input.get('tags') or  origin.get('tags')  or []
+    new_meta = input.get('meta') or origin.get('meat') or {}
+
+    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where id=$1 and namespace=$2',
+        json.dumps(new_meta),new_tags,id,namespace)
+    return '"ok"'
 
 # @app.route('/file/<path:namespace>:<id>', methods=['DELETE'])
 # async def delete_file(namespace,id):
@@ -82,23 +132,23 @@ async def upload():
     try:
         info = json.loads((await request.form)['payload'])
     except:
-        return 'payload in json format should be provided!',400
+        return '"payload in json format should be provided!"',400
     try:
         filename = info['filename']
     except:
-        return '"filename" in payload should be provided!',400
+        return '"`filename` in payload should be provided!"',400
     try:
         namespace = info['namespace']
     except:
-        return '"namespace" in payload should be provided!',400
+        return '"`namespace` in payload should be provided!"',400
 
     exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
     if exist:
-        return '"{}:{}" exists'.format(namespace,filename), 400
+        return '"`{}:{}` exists"'.format(namespace,filename), 400
     try:
         file = (await request.files)['file']
     except:
-        return "file should be provided!",400
+        return '"file should be provided!"',400
     data = FormData()
     data.add_field('file', file.stream)
     
@@ -106,8 +156,8 @@ async def upload():
     resp2 = await post('http://volume:18080/{}'.format(file_id),data=data)
     info2 = await resp2["resp"].json()
 
-    await app.db.execute('''
-        INSERT INTO api.files values(DEFAULT,$1,$2,$3,$4,$5,$6,$7,$8)
+    id = await app.db.fetchval('''
+        INSERT INTO api.files values(DEFAULT,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING id
         ''',
         file_id,
         json.dumps(info.get('meta') or {}),
@@ -117,12 +167,12 @@ async def upload():
         os.path.splitext(info['filename'])[1],
         info['filename'],
         info['namespace'])
-    return "ok"
+    return json.dumps({"id":id,"seaweedfs_id":file_id})
 
 @app.route('/file/<id>')
 async def getfile(id: str):
-    resp = await fetchs('http://volume:18080/{}'.format(id))
-    return resp["html"], resp["status"], resp["headers"]
+    resp = await fetch_stream('http://volume:18080/{}'.format(id))
+    return resp.content, resp.status, resp.headers
 
 @app.route('/query')
 async def query():
@@ -131,9 +181,7 @@ async def query():
 
 @app.route('/sql/<path:query>')
 async def sql(query:str):
-    print(query)
     rets = [dict(x) for x in await app.read_only_db.fetch('select * from api.files where {}'.format(query))]
-    print(rets)
     return json.dumps(rets)
 
 if __name__ == "__main__":
