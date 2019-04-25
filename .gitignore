@@ -6,7 +6,7 @@ __pycache__/
 data/
 # C extensions
 *.so
-
+.dobi/
 # Distribution / packaging
 .Python
 build/
