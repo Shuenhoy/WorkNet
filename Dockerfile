@@ -12,5 +12,5 @@ RUN apk add --no-cache build-base \
     && apk del build-base 
 
 RUN pipenv install --system
-
-CMD [ "/bin/sh" ]
+COPY . /app
+CMD [ "hypercorn", "src/main:app", "-b", "0.0.0.0:5000" ]

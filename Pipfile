@@ -9,6 +9,7 @@ verify_ssl = true
 quart = "*"
 hypercorn = "*"
 aiohttp = "*"
+asyncpg = "*"
 
 [requires]
 python_version = "3.7"

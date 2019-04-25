@@ -1,10 +1,22 @@
 version: '3'
 
 services:
+  web:
+    build: .
+    depends_on: 
+      - postgrest
+      - database
+      - master
+      - volume
+    networks: 
+      db: {}
+      seaweedfs: {}
+    ports:
+      - "15000:5000"
   postgrest:
     image: postgrest/postgrest
     ports:
-      - "3000:3000"
+      - "3000"
     environment:
       PGRST_DB_URI: postgres://postgre:password@database:5432/db
       PGRST_DB_SCHEMA: api
@@ -13,6 +25,7 @@ services:
       - database
     networks:
       db: {}
+      seaweedfs: {}
   database:
     image: postgres:alpine
     volumes:
@@ -27,8 +40,7 @@ services:
   master:
     image: chrislusf/seaweedfs # use a remote image
     ports:
-    - 9333:9333
-    - 19333:19333
+    - 9333
     command: "master"
     volumes:
     - ./data/seaweedfs/master:/data/
@@ -37,7 +49,7 @@ services:
   volume:
     image: chrislusf/seaweedfs # use a remote image
     ports:
-    - 18080:18080
+    - 18080
     command: 'volume -max=15 -mserver="master:9333" -port=18080'
     depends_on:
     - master

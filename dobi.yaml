@@ -19,4 +19,6 @@ job=shell:
   use: dev
   interactive: true
   provide-docker: true
+  ports:
+    - 15000:5000
   mounts: [workdir, dockercli]
