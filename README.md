@@ -63,3 +63,29 @@ curl "http://localhost:15000/user/shr:a.png"
 ```
 
 `6,01da5e214b` is the `seaweedfs`'s file_id
+
+## Foci - File prOvider ClI 
+
+first modify `base` in `./foci` to the real url, then
+
+```bash
+foci u[pload] <namespace>:<filename> <path_to_file> <payload>
+  example: foci u shr:a.png a.png '{"tags":["image"]}'
+
+
+foci q[uery] <query str>
+  example: foci q extname=eq..png
+
+
+foci s[ql] <sql str>
+  example: foci s "namespace='shr' and extname='.obj'"
+
+
+foci m[odify] <namespace>:<filename> <payload>
+foci r[eplace] <namespace>:<filename> <payload>
+
+
+foci d[ownload] <namespace>:<filename>
+```
+foci u shr:a.png a.png '{"tags":["image"]}'
+```
