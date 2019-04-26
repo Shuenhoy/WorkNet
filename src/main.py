@@ -38,7 +38,7 @@ async def fetchs(url: str, params:dict=None):
             "html": html,
             "url": url,
         }
-@app.route('/file/<path:namespace>:<path:filename>', methods=['PATCH'])
+@app.route('/<path:namespace>:<path:filename>', methods=['PATCH'])
 async def patch_file_name(namespace,filename):
     
     input = await request.get_json(force=True)
@@ -55,7 +55,7 @@ async def patch_file_name(namespace,filename):
         json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),FileNotFoundError,namespace)
     return '"ok"'
 
-@app.route('/file/<path:namespace>:<path:filename>', methods=['GET'])
+@app.route('/<path:namespace>:<path:filename>', methods=['GET'])
 async def get_file_by_name(namespace,filename):
     exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
     if exist==None:
@@ -64,7 +64,7 @@ async def get_file_by_name(namespace,filename):
     resp = await fetch_stream('http://volume:18080/{}'.format(origin['seaweedid']))
     return resp.content, resp.status, resp.headers
 
-@app.route('/file/<path:namespace>::<int:id>', methods=['PATCH'])
+@app.route('/<path:namespace>::<int:id>', methods=['PATCH'])
 async def patch_file_id(namespace,id):
     try:
         id = int(id)
@@ -84,7 +84,7 @@ async def patch_file_id(namespace,id):
         json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),id,namespace)
     return '"ok"'
 
-@app.route('/file/<path:namespace>:<path:filename>', methods=['PUT'])
+@app.route('/<path:namespace>:<path:filename>', methods=['PUT'])
 async def put_file_filename(namespace,filename):
 
     input = await request.get_json(force=True)
@@ -99,7 +99,7 @@ async def put_file_filename(namespace,filename):
         json.dumps(new_meta),new_tags,filename,namespace)
     return '"ok"'
 
-@app.route('/file/<path:namespace>::<int:id>', methods=['PUT'])
+@app.route('/<path:namespace>::<int:id>', methods=['PUT'])
 async def put_file_id(namespace,id):
     try:
         id = int(id)
@@ -116,16 +116,44 @@ async def put_file_id(namespace,id):
     await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where id=$1 and namespace=$2',
         json.dumps(new_meta),new_tags,id,namespace)
     return '"ok"'
+@app.route('/<path:namespace>:<path:filename>', methods=["POST"])
+async def upload_to(namespace, filename):
+    resp = (await fetchs('http://master:9333/dir/assign'))
+    file_id = (await resp["resp"].json())['fid']
+    try:
+        info = json.loads((await request.form)['payload'])
+    except:
+        info = {}
+   
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
+    if exist:
+        return '"`{}:{}` exists"'.format(namespace,filename), 400
+    try:
+        file = (await request.files)['file']
+    except:
+        return '"file should be provided!"',400
+    data = FormData()
+    data.add_field('file', file.stream)
+    
 
-# @app.route('/file/<path:namespace>:<id>', methods=['DELETE'])
-# async def delete_file(namespace,id):
-#     exist = await app.read_only_db.fetchrow('SELECT id from api.files where id=$1 and namespace=$2',int(id),namespace)
-#     if exist==None:
-#         return '"{}:{}" not exists'.format(namespace,id), 400
-#     await app.db.execute('DELETA api.files  where id=$1 and namespace=$2',int(id),namespace)
-#     return "ok"
+    resp2 = await post('http://volume:18080/{}'.format(file_id),data=data)
+    info2 = await resp2["resp"].json()
 
-@app.route('/file', methods=["POST"])
+    id = await app.db.fetchval('''
+        INSERT INTO api.files values(DEFAULT,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING id
+        ''',
+        file_id,
+        json.dumps(info.get('meta') or {}),
+        info2['size'],
+        info2['eTag'],
+        info.get('tags'),
+        os.path.splitext(filename)[1],
+        filename,
+        namespace)
+    return json.dumps({"id":id,"seaweedfs_id":file_id})
+
+
+@app.route('/', methods=["POST"])
 async def upload():
     resp = (await fetchs('http://master:9333/dir/assign'))
     file_id = (await resp["resp"].json())['fid']
@@ -169,17 +197,17 @@ async def upload():
         info['namespace'])
     return json.dumps({"id":id,"seaweedfs_id":file_id})
 
-@app.route('/file/<id>')
+@app.route('/@id/<id>')
 async def getfile(id: str):
     resp = await fetch_stream('http://volume:18080/{}'.format(id))
     return resp.content, resp.status, resp.headers
 
-@app.route('/query')
+@app.route('/')
 async def query():
     resp = await fetchs('http://postgrest:3000/files',request.args)
     return resp["html"]
 
-@app.route('/sql/<path:query>')
+@app.route('/@where/<path:query>')
 async def sql(query:str):
     rets = [dict(x) for x in await app.read_only_db.fetch('select * from api.files where {}'.format(query))]
     return json.dumps(rets)
