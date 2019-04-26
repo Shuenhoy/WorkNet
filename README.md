@@ -87,5 +87,3 @@ foci r[eplace] <namespace>:<filename> <payload>
 
 foci d[ownload] <namespace>:<filename>
 ```
-foci u shr:a.png a.png '{"tags":["image"]}'
-```
