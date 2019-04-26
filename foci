@@ -1,0 +1,88 @@
+#! /bin/bash
+
+command=$1
+base="http://localhost:15000"
+
+case $command in
+"u")
+;&
+"upload")
+    temp=${@:4}
+    if [ -z "$temp" ]; then
+       
+        temp="{}"
+    fi
+    curl -s $base/$2 -X POST -F file=@$3 -F payload="'$temp'"
+    echo ""
+;;
+
+"q")
+;&
+"query")
+    temp=${@:2}
+    curl -s $base/?$temp
+    echo ""
+;;
+
+"s")
+;&
+"sql")
+    temp=${@:2}
+    curl -s $base/@where/$temp
+    echo ""
+;;
+
+"d")
+;&
+"download")
+    temp=${@:2}
+    curl -O $base/$temp
+;;
+
+"m")
+;&
+"modify")
+    temp=${@:3}
+    if [ -z "$temp" ]; then
+       
+        temp="{}"
+    fi
+
+    curl -s "$base/$2" -X 'PATCH' -d "$temp"
+    echo ""
+;;
+
+"r")
+;&
+"replace")
+    temp=${@:3}
+    if [ -z "$temp" ]; then
+       
+        temp="{}"
+    fi
+    curl -s $base/$2 -X PUT -d "$temp"
+    echo ""
+;;
+*)
+echo 'Foci - File prOvider ClI '
+echo 'By Haoran SUN<shuenhoy@zju.edu.cn> 2019'
+echo ''
+echo 'foci u[pload] <namespace>:<filename> <path_to_file> <payload>'
+echo "  example: foci u shr:a.png a.png '{\"tags\":[\"image\"]}'"
+echo ''
+echo ''
+echo 'foci q[uery] <query str>'
+echo "  example: foci q extname=eq..png"
+echo ''
+echo ''
+echo 'foci s[ql] <sql str>'
+echo "  example: foci s \"namespace='shr' and extname='.obj'\""
+echo ''
+echo ''
+echo 'foci m[odify] <namespace>:<filename> <payload>'
+echo 'foci r[eplace] <namespace>:<filename> <payload>'
+echo ''
+echo ''
+echo 'foci d[ownload] <namespace>:<filename>'
+;;
+esac

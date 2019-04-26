@@ -8,6 +8,8 @@ services:
       - database
       - master
       - volume
+    stdin_open: true
+    tty: true
     networks: 
       db: {}
       seaweedfs: {}

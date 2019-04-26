@@ -1,4 +1,5 @@
 from quart import Quart, websocket, request
+from quart.routing import BaseConverter
 import aiohttp
 import asyncio
 import asyncpg
@@ -8,6 +9,12 @@ import os
 from aiohttp import FormData
 
 app = Quart(__name__)
+
+class AllConverter(BaseConverter):
+    regex = r'.*'
+    weight = 200
+
+app.url_map.converters['all'] = AllConverter
 
 @app.before_serving
 async def create_aiohttp():
@@ -49,10 +56,10 @@ async def patch_file_name(namespace,filename):
     new_tags = input.get('tags') or []
     new_meta = input.get('meta') or {}
     old_tags = origin.get('tags') or []
-    old_meta = origin.get('meta') or {}
+    old_meta = origin.get('metadata') or {}
 
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where filename=$3 and namespace=$4',
-        json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),FileNotFoundError,namespace)
+    await app.db.execute('UPDATE api.files set metadata=$1::jsonb, tags=$2 where filename=$3 and namespace=$4',
+        json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),filename,namespace)
     return '"ok"'
 
 @app.route('/<path:namespace>:<path:filename>', methods=['GET'])
@@ -78,9 +85,9 @@ async def patch_file_id(namespace,id):
     new_tags = input.get('tags') or []
     new_meta = input.get('meta') or {}
     old_tags = origin.get('tags') or []
-    old_meta = origin.get('meta') or {}
+    old_meta = origin.get('metadata') or {}
 
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where id=$3 and namespace=$4',
+    await app.db.execute('UPDATE api.files set metadata=$1::jsonb, tags=$2 where id=$3 and namespace=$4',
         json.dumps({**old_meta, **new_meta}),list(set(old_tags).union(set(new_tags))),id,namespace)
     return '"ok"'
 
@@ -88,14 +95,15 @@ async def patch_file_id(namespace,id):
 async def put_file_filename(namespace,filename):
 
     input = await request.get_json(force=True)
-    exist = await app.read_only_db.fetchrow('SELECT id from api.files where filename=$1 and namespace=$2',filename,namespace)
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where filename=$1 and namespace=$2',filename,namespace)
     if exist==None:
         return '"`{}:{}` not exists"'.format(namespace,id), 400
     origin = dict(exist)
+    print(origin, dict(input))
     new_tags = input.get('tags') or  origin.get('tags')  or []
-    new_meta = input.get('meta') or origin.get('meat') or {}
-
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where filename=$1 and namespace=$2',
+    new_meta = input.get('meta') or origin.get('metadata') or {}
+    
+    await app.db.execute('UPDATE api.files set metadata=$1::jsonb, tags=$2 where filename=$3 and namespace=$4',
         json.dumps(new_meta),new_tags,filename,namespace)
     return '"ok"'
 
@@ -106,14 +114,15 @@ async def put_file_id(namespace,id):
     except:
         return '"should provide id of int type"',400
     input = await request.get_json(force=True)
-    exist = await app.read_only_db.fetchrow('SELECT id from api.files where id=$1 and namespace=$2',id,namespace)
+    exist = await app.read_only_db.fetchrow('SELECT * from api.files where id=$1 and namespace=$2',id,namespace)
     if exist==None:
         return '"`{}:{}` not exists"'.format(namespace,id), 400
     origin = dict(exist)
+    
     new_tags = input.get('tags') or  origin.get('tags')  or []
-    new_meta = input.get('meta') or origin.get('meat') or {}
+    new_meta = input.get('meta') or origin.get('metadata') or {}
 
-    await app.db.execute('UPDATE api.files set metadata=$1, tags=$2 where id=$1 and namespace=$2',
+    await app.db.execute('UPDATE api.files set metadata=$1::jsonb, tags=$2 where id=$3 and namespace=$4',
         json.dumps(new_meta),new_tags,id,namespace)
     return '"ok"'
 @app.route('/<path:namespace>:<path:filename>', methods=["POST"])
@@ -207,9 +216,14 @@ async def query():
     resp = await fetchs('http://postgrest:3000/files',request.args)
     return resp["html"]
 
-@app.route('/@where/<path:query>')
+@app.route('/@where/<all:query>')
 async def sql(query:str):
-    rets = [dict(x) for x in await app.read_only_db.fetch('select * from api.files where {}'.format(query))]
+    test=request.full_path[8:]
+
+    try:
+        rets = [dict(x) for x in await app.read_only_db.fetch('select * from api.files where {}'.format(test))]
+    except:
+        return '"sql error!"',400
     return json.dumps(rets)
 
 if __name__ == "__main__":
