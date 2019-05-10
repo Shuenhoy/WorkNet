@@ -1,7 +1,7 @@
 #! /bin/bash
 
 command=$1
-base="http://localhost:15000"
+base="http://10.76.1.125:15000"
 
 case $command in
 "u")
