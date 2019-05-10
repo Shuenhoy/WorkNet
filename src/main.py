@@ -1,4 +1,4 @@
-from quart import Quart, websocket, request
+from quart import Quart, websocket, request, make_response
 from quart.routing import BaseConverter
 import aiohttp
 import asyncio
@@ -68,8 +68,9 @@ async def get_file_by_name(namespace,filename):
     if exist==None:
         return '"`{}:{}` not exists"'.format(namespace,filename), 400
     origin = dict(exist)
-    resp = await fetch_stream('http://volume:18080/{}'.format(origin['seaweedid']))
-    return resp.content, resp.status, resp.headers
+    resp = await fetchs('http://volume:18080/{}'.format(origin['seaweedid']))
+  
+    return resp['html'], resp['status'], resp['headers']
 
 @app.route('/<path:namespace>::<int:id>', methods=['PATCH'])
 async def patch_file_id(namespace,id):
@@ -208,8 +209,8 @@ async def upload():
 
 @app.route('/@id/<id>')
 async def getfile(id: str):
-    resp = await fetch_stream('http://volume:18080/{}'.format(id))
-    return resp.content, resp.status, resp.headers
+    resp = await fetchs('http://volume:18080/{}'.format(id))
+    return resp['html'], resp['status'], resp['headers']
 
 @app.route('/')
 async def query():
