@@ -1,11 +1,9 @@
 using System.Collections.Generic;
+using System;
 using Microsoft.EntityFrameworkCore;
 namespace WorkNet.Server.Models
 {
-    public class TaskContext : DbContext
-    {
-        public DbSet<UserTask> UserTasks { get; set; }
-    }
+
     public class Executor
     {
         public long ExecutorId;
@@ -18,6 +16,7 @@ namespace WorkNet.Server.Models
         public Executor executor { get; set; }
         public int SubFinished { get; set; }
         public int SubTotal { get; set; }
+        public DateTime SubmitTime { get; set; }
         public ICollection<ExecTask> SubTasks { get; set; }
 
     }
