@@ -10,8 +10,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Sqlite;
+using Microsoft.EntityFrameworkCore.InMemory;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+using Microsoft.EntityFrameworkCore.Proxies;
+using WorkNet.Server.Models;
 
-namespace WorkNet_Server
+namespace WorkNet.Server
 {
     public class Startup
     {
@@ -26,6 +32,25 @@ namespace WorkNet_Server
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddDbContext<TaskContext>(opt =>
+            {
+                opt.UseLazyLoadingProxies();
+
+                switch (Configuration.GetValue("DatabaseType", "memory"))
+                {
+                    case "sqlite":
+                        opt.UseSqlite(Configuration.GetConnectionString("sqlite"));
+                        break;
+                    case "memory":
+                        opt.UseInMemoryDatabase("db");
+                        break;
+                    case "postgresql":
+                        opt.UseNpgsql(Configuration.GetConnectionString("postgresql"));
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

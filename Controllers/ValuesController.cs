@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 
-namespace WorkNet_Server.Controllers
+namespace WorkNet.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
