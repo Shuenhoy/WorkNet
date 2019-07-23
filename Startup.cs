@@ -10,8 +10,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
-namespace WorkNet_FileProvider
+namespace WorkNet.FileProvider
 {
     public class Startup
     {
@@ -25,6 +27,7 @@ namespace WorkNet_FileProvider
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<Models.FileEntryContext>();
             services.AddControllers();
         }
 

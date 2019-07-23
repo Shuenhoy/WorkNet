@@ -6,5 +6,7 @@
 	],
 	"service": "dev",
 	"workspaceFolder": "/app",
-	"extensions": []
+	"extensions": [
+		"ms-vscode.csharp"
+	]
 }

@@ -12,3 +12,6 @@ services:
       - "15001:5001"
     volumes:
       - .:/app
+    networks:
+      seaweedfs: {}
+      db: {}
