@@ -10,8 +10,8 @@ using WorkNet.FileProvider.Models;
 namespace WorkNet.FileProvider.Migrations
 {
     [DbContext(typeof(FileEntryContext))]
-    [Migration("20190722100315_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20190724031416_Init")]
+    partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -24,28 +24,38 @@ namespace WorkNet.FileProvider.Migrations
             modelBuilder.Entity("WorkNet.FileProvider.Models.FileEntry", b =>
                 {
                     b.Property<int>("FileEntryID")
-                        .ValueGeneratedOnAdd();
+                        .ValueGeneratedOnAdd()
+                        .HasColumnName("file_entry_id");
 
-                    b.Property<string>("ETag");
+                    b.Property<string>("ETag")
+                        .HasColumnName("etag");
 
-                    b.Property<string>("ExtName");
+                    b.Property<string>("ExtName")
+                        .HasColumnName("ext_name");
 
-                    b.Property<string>("FileName");
+                    b.Property<string>("FileName")
+                        .HasColumnName("file_name");
 
                     b.Property<string>("Metadata")
+                        .HasColumnName("metadata")
                         .HasColumnType("jsonb");
 
-                    b.Property<string>("Namespace");
+                    b.Property<string>("Namespace")
+                        .HasColumnName("namespace");
 
-                    b.Property<string>("SeaweedId");
+                    b.Property<string>("SeaweedId")
+                        .HasColumnName("seaweed_id");
 
-                    b.Property<int>("Size");
+                    b.Property<int>("Size")
+                        .HasColumnName("size");
 
-                    b.Property<List<string>>("Tags");
+                    b.Property<List<string>>("Tags")
+                        .HasColumnName("tags");
 
-                    b.HasKey("FileEntryID");
+                    b.HasKey("FileEntryID")
+                        .HasName("pk_file_entries");
 
-                    b.ToTable("FileEntries");
+                    b.ToTable("file_entries");
                 });
 #pragma warning restore 612, 618
         }

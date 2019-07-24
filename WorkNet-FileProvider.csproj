@@ -6,7 +6,11 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Watch Include="**/*.cs" Exclude="data/**/*" />
+    <Watch Include="**/*.cs" Exclude="test\**" />
+    <Compile Remove="test\**" />
+    <Content Remove="test\**" />
+    <EmbeddedResource Remove="test\**" />
+  <None Remove="test\**" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

@@ -28,6 +28,7 @@ namespace WorkNet.FileProvider
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<Models.FileEntryContext>();
+            services.AddDbContext<Models.ReadonlyFileEntryContext>();
             services.AddControllers();
         }
 

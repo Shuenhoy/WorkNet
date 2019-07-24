@@ -23,11 +23,14 @@ namespace WorkNet.FileProvider.Controllers
     public class FileController : ControllerBase
     {
         private readonly FileEntryContext context;
+        private readonly ReadonlyFileEntryContext readonlyContext;
         private readonly HttpClient client;
-        public FileController(FileEntryContext c)
+        public FileController(FileEntryContext c, ReadonlyFileEntryContext rc)
         {
             client = new HttpClient();
+            readonlyContext = rc;
             context = c;
+
         }
 
         /// <summary>
@@ -53,7 +56,7 @@ namespace WorkNet.FileProvider.Controllers
         [HttpGet("@where/{cond}")]
         public async Task<ActionResult<List<FileEntry>>> GetByCondition(string cond)
         {
-            return await context.FileEntries
+            return await readonlyContext.FileEntries
                 .FromSql($"SELECT * FROM file_entries where " + cond)
                 .ToListAsync();
         }
@@ -97,13 +100,12 @@ namespace WorkNet.FileProvider.Controllers
         [HttpPost]
         public async Task<ActionResult<FileEntry>> Post([FromForm] IFormFile file, [FromForm] string payload)
         {
-            var entry = JsonSerializer.Parse<FileEntry>(payload);
+            var entry = JsonSerializer.Deserialize<FileEntry>(payload);
             var assign = await client.GetAsync("http://master:9333/dir/assign")
                 .Bind(resp => resp.Content.ReadAsStringAsync())
                 .Map(raw => JsonDocument.Parse(raw));
 
-            Console.WriteLine($"!!!{entry.Metadata}");
-            entry.Metadata = "{\"test\":1}";
+
             entry.SeaweedId = assign.RootElement.GetProperty("fid").GetString();
             if (entry.Namespace is null)
             {
