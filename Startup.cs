@@ -32,7 +32,7 @@ namespace WorkNet.Server
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddDbContext<TaskContext>(opt =>
+            services.AddDbContext<ServerContext>(opt =>
             {
                 opt.UseLazyLoadingProxies();
 

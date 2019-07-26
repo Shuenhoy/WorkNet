@@ -12,8 +12,8 @@ namespace WorkNet.Server.Controllers
     [ApiController]
     public class ExecutorsController : ControllerBase
     {
-        private readonly TaskContext context;
-        public ExecutorsController(TaskContext c)
+        private readonly ServerContext context;
+        public ExecutorsController(ServerContext c)
         {
             context = c;
         }
