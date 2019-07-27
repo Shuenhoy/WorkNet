@@ -11,18 +11,18 @@ namespace WorkNet.Server.Models
 
     public class Executor
     {
-        public long ExecutorId;
-        public string Image;
-        public string Execution;
+        public long ExecutorId { get; set; }
+        public string Image { get; set; }
+        public string Execution { get; set; }
     }
     public class UserTask
     {
         public int UserTaskId { get; set; }
-        public Executor executor { get; set; }
+        public virtual Executor executor { get; set; }
         public int SubFinished { get; set; }
         public int SubTotal { get; set; }
         public DateTime SubmitTime { get; set; }
-        public ICollection<TaskGroup> SubTasks { get; set; }
+        public virtual ICollection<TaskGroup> SubTasks { get; set; }
 
     }
     public class SingleTask
@@ -46,10 +46,12 @@ namespace WorkNet.Server.Models
     public class TaskGroup
     {
         public int TaskGroupId { get; set; }
-        public ICollection<SingleTask> SingleTasks { get; set; }
+        public virtual ICollection<SingleTask> SingleTasks { get; set; }
 
         public int Status;
         public int UserTaskId;
-        public UserTask UserTask { get; set; }
+        [JsonIgnore]
+
+        public virtual UserTask UserTask { get; set; }
     }
 }

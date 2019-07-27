@@ -6,6 +6,6 @@ namespace WorkNet.Server.Services
 {
     public interface ITaskDivisionService
     {
-        IEnumerable<ExecTask> Divide(UserTask input);
+        ICollection<TaskGroup> Divide(IEnumerable<SingleTask> inputs);
     }
 }

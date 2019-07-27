@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore.InMemory;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Microsoft.EntityFrameworkCore.Proxies;
 using WorkNet.Server.Models;
+using WorkNet.Server.Services;
 
 namespace WorkNet.Server
 {
@@ -34,23 +35,12 @@ namespace WorkNet.Server
             services.AddControllers();
             services.AddDbContext<ServerContext>(opt =>
             {
-                opt.UseLazyLoadingProxies();
 
-                switch (Configuration.GetValue("DatabaseType", "memory"))
-                {
-                    case "sqlite":
-                        opt.UseSqlite(Configuration.GetConnectionString("sqlite"));
-                        break;
-                    case "memory":
-                        opt.UseInMemoryDatabase("db");
-                        break;
-                    case "postgresql":
-                        opt.UseNpgsql(Configuration.GetConnectionString("postgresql"));
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
+
+
             });
+            services.AddScoped<ITaskDivisionService, NaiveTaskDivisionService>();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
