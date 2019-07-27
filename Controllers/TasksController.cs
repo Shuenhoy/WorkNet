@@ -17,10 +17,12 @@ namespace WorkNet.Server.Controllers
     {
         private readonly ServerContext context;
         private readonly ITaskDivisionService taskDivider;
-        public TasksController(ServerContext c, ITaskDivisionService t)
+        private readonly RabbitMQService rabbitMQ;
+        public TasksController(ServerContext c, ITaskDivisionService t, RabbitMQService r)
         {
             context = c;
             taskDivider = t;
+            rabbitMQ = r;
         }
         [HttpGet("")]
         public async Task<ActionResult<List<UserTask>>> Get()
@@ -78,6 +80,10 @@ namespace WorkNet.Server.Controllers
                 SubmitTime = DateTime.Now
             };
             context.UserTasks.Add(task);
+            foreach (var group in task.SubTasks)
+            {
+                rabbitMQ.Publish(group);
+            }
             await context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetByID), new { id = task.UserTaskId }, task);
         }

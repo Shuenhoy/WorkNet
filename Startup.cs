@@ -39,6 +39,7 @@ namespace WorkNet.Server
 
 
             });
+            services.AddSingleton<RabbitMQService>();
             services.AddScoped<ITaskDivisionService, NaiveTaskDivisionService>();
 
         }
