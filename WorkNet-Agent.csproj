@@ -6,4 +6,8 @@
     <RootNamespace>WorkNet.Agent</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" Version="5.1.0" />
+  </ItemGroup>
+
 </Project>
