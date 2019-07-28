@@ -1,3 +1,0 @@
-[cli]
-bears = MypyBear,PEP8Bear,PyLintBear
-files = src/*.py
