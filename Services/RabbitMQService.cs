@@ -16,12 +16,12 @@ namespace WorkNet.Server.Services
         private IModel channel;
         public RabbitMQService(IServiceScopeFactory sf)
         {
-            var factory = new ConnectionFactory();
+            var factory = new ConnectionFactory() { HostName = "rabbitmq", UserName = "server", Password="server" };;
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
 
             channel.QueueDeclare(queue: "task_queue",
-                                     durable: false,
+                                     durable: true,
                                      exclusive: false,
                                      autoDelete: false,
                                      arguments: null);

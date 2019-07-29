@@ -28,7 +28,8 @@ namespace WorkNet.Server.Migrations
                 {
                     UserTaskId = table.Column<int>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    ExecutorId = table.Column<long>(nullable: true),
+                    Image = table.Column<string>(nullable: true),
+                    Execution = table.Column<string>(nullable: true),
                     SubFinished = table.Column<int>(nullable: false),
                     SubTotal = table.Column<int>(nullable: false),
                     SubmitTime = table.Column<DateTime>(nullable: false)
@@ -36,12 +37,6 @@ namespace WorkNet.Server.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_UserTasks", x => x.UserTaskId);
-                    table.ForeignKey(
-                        name: "FK_UserTasks_Executors_ExecutorId",
-                        column: x => x.ExecutorId,
-                        principalTable: "Executors",
-                        principalColumn: "ExecutorId",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -70,7 +65,7 @@ namespace WorkNet.Server.Migrations
                     SingleTaskId = table.Column<long>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
                     Parameters = table.Column<string>(type: "json", nullable: true),
-                    Pulls = table.Column<string[]>(nullable: true),
+                    Pulls = table.Column<int[]>(nullable: true),
                     TaskGroupId = table.Column<int>(nullable: true)
                 },
                 constraints: table =>
@@ -93,15 +88,13 @@ namespace WorkNet.Server.Migrations
                 name: "IX_TaskGroups_UserTaskId1",
                 table: "TaskGroups",
                 column: "UserTaskId1");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserTasks_ExecutorId",
-                table: "UserTasks",
-                column: "ExecutorId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Executors");
+
             migrationBuilder.DropTable(
                 name: "SingleTask");
 
@@ -110,9 +103,6 @@ namespace WorkNet.Server.Migrations
 
             migrationBuilder.DropTable(
                 name: "UserTasks");
-
-            migrationBuilder.DropTable(
-                name: "Executors");
         }
     }
 }

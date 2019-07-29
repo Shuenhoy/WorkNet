@@ -18,7 +18,8 @@ namespace WorkNet.Server.Models
     public class UserTask
     {
         public int UserTaskId { get; set; }
-        public virtual Executor executor { get; set; }
+        public string Image { get; set; }
+        public string Execution { get; set; }
         public int SubFinished { get; set; }
         public int SubTotal { get; set; }
         public DateTime SubmitTime { get; set; }
@@ -41,7 +42,7 @@ namespace WorkNet.Server.Models
             set => Parameters = value.ToString();
         }
 
-        public string[] Pulls { get; set; }
+        public int[] Pulls { get; set; }
     }
     public class TaskGroup
     {

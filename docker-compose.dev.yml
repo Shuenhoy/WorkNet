@@ -14,3 +14,4 @@ services:
       - /app/data
     networks:
       db: {}
+      rbmq: {}

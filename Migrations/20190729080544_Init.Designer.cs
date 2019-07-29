@@ -10,7 +10,7 @@ using WorkNet.Server.Models;
 namespace WorkNet.Server.Migrations
 {
     [DbContext(typeof(ServerContext))]
-    [Migration("20190727074542_Init")]
+    [Migration("20190729080544_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,7 +43,7 @@ namespace WorkNet.Server.Migrations
                     b.Property<string>("Parameters")
                         .HasColumnType("json");
 
-                    b.Property<string[]>("Pulls");
+                    b.Property<int[]>("Pulls");
 
                     b.Property<int?>("TaskGroupId");
 
@@ -73,7 +73,9 @@ namespace WorkNet.Server.Migrations
                     b.Property<int>("UserTaskId")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<long?>("ExecutorId");
+                    b.Property<string>("Execution");
+
+                    b.Property<string>("Image");
 
                     b.Property<int>("SubFinished");
 
@@ -82,8 +84,6 @@ namespace WorkNet.Server.Migrations
                     b.Property<DateTime>("SubmitTime");
 
                     b.HasKey("UserTaskId");
-
-                    b.HasIndex("ExecutorId");
 
                     b.ToTable("UserTasks");
                 });
@@ -100,13 +100,6 @@ namespace WorkNet.Server.Migrations
                     b.HasOne("WorkNet.Server.Models.UserTask", "UserTask")
                         .WithMany("SubTasks")
                         .HasForeignKey("UserTaskId1");
-                });
-
-            modelBuilder.Entity("WorkNet.Server.Models.UserTask", b =>
-                {
-                    b.HasOne("WorkNet.Server.Models.Executor", "executor")
-                        .WithMany()
-                        .HasForeignKey("ExecutorId");
                 });
 #pragma warning restore 612, 618
         }

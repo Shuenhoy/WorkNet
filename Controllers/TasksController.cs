@@ -43,16 +43,15 @@ namespace WorkNet.Server.Controllers
         }
         public class GroupInfo
         {
-
+            public long Id { get; set; }
+            public string Image { get; set; }
+            public string Execution { get; set; }
             public List<JsonElement> Parameters { get; set; }
-            public List<string> Pulls { get; set; }
+            public List<int> Pulls { get; set; }
         }
-        [HttpGet("@group/{id}")]
-        public async Task<ActionResult<GroupInfo>> GetGroup(int id)
+        public GroupInfo GetGroutInfo(TaskGroup group)
         {
-            var group = await context.TaskGroups.FindAsync(id);
-            if (group == null) return NotFound();
-            var pulls = new HashSet<string>();
+            var pulls = new HashSet<int>();
             var parameters = new List<JsonElement>();
             foreach (var item in group.SingleTasks)
             {
@@ -63,8 +62,14 @@ namespace WorkNet.Server.Controllers
 
                 }
             }
-            Console.WriteLine((parameters, pulls.ToList()));
-            return new GroupInfo { Parameters = parameters, Pulls = pulls.ToList() };
+            return new GroupInfo { Image = group.UserTask.Image, Execution = group.UserTask.Execution, Parameters = parameters, Pulls = pulls.ToList(), Id = group.TaskGroupId };
+        }
+        [HttpGet("@group/{id}")]
+        public async Task<ActionResult<GroupInfo>> GetGroup(int id)
+        {
+            var group = await context.TaskGroups.FindAsync(id);
+            if (group == null) return NotFound();
+            return GetGroutInfo(group);
         }
 
         [HttpPost]
@@ -74,17 +79,19 @@ namespace WorkNet.Server.Controllers
             var task = new UserTask()
             {
                 SubFinished = 0,
-                executor = input.executor,
+                Image = input.executor.Image,
+                Execution = input.executor.Execution,
                 SubTotal = groups.Count(),
                 SubTasks = groups,
                 SubmitTime = DateTime.Now
             };
             context.UserTasks.Add(task);
+            await context.SaveChangesAsync();
+
             foreach (var group in task.SubTasks)
             {
-                rabbitMQ.Publish(group);
+                rabbitMQ.Publish(group.TaskGroupId);
             }
-            await context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetByID), new { id = task.UserTaskId }, task);
         }
     }
