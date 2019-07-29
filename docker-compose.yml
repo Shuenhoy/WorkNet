@@ -1,13 +1,7 @@
 version: '3'
 
 services:
-  dev:
-    build: .
-    ports:
-      - "15000:80"
-    networks:
-      seaweedfs: {}
-      db: {}
+  
   database:
     image: postgres:alpine
     volumes:
@@ -19,8 +13,7 @@ services:
       POSTGRES_DB: db
     networks:
       db: {}
-    ports:
-      - 35545:35545
+  
   master:
     image: chrislusf/seaweedfs # use a remote image
     ports:

@@ -61,6 +61,7 @@ namespace WorkNet.FileProvider.Models
             get => JsonDocument.Parse(Metadata is null ? "{}" : Metadata).RootElement;
             set => Metadata = value.ToString();
         }
+
         public int Size { get; set; }
         public string ETag { get; set; }
         public List<string> Tags { get; set; }

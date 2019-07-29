@@ -49,7 +49,6 @@ namespace WorkNet.FileProvider.Controllers
             }
             var resp = await client.GetAsync($"http://volume:18080/{entry.SeaweedId}");
             var stream = await resp.Content.ReadAsStreamAsync();
-            Console.WriteLine($"!!{resp.Content.Headers}");
             return File(stream, resp.Content.Headers.ContentType.MediaType);
 
         }
@@ -60,7 +59,7 @@ namespace WorkNet.FileProvider.Controllers
                 .FromSql($"SELECT * FROM file_entries where " + cond)
                 .ToListAsync();
         }
-        [HttpHead("@id/{id}")]
+        [HttpGet("@idhead/{id}")]
         public async Task<ActionResult<FileEntry>> HeadByID(int id)
         {
             var entry = await context.FileEntries.FindAsync(id);
@@ -98,10 +97,10 @@ namespace WorkNet.FileProvider.Controllers
 
         // POST api/values
         [HttpPost]
-        public async Task<ActionResult<FileEntry>> Post([FromForm] IFormFile file, [FromForm] string payload)
+        public async Task<ActionResult<FileEntry>> Post([FromForm] IFormFile files, [FromForm] string payload)
         {
             var entry = JsonSerializer.Deserialize<FileEntry>(payload);
-            var assign = await client.GetAsync("http://master:9333/dir/assign")
+            var assign = await client.GetAsync("http://master:9333/dir/assign?collection=file")
                 .Bind(resp => resp.Content.ReadAsStringAsync())
                 .Map(raw => JsonDocument.Parse(raw));
 
@@ -111,13 +110,17 @@ namespace WorkNet.FileProvider.Controllers
             {
                 return BadRequest("no `namespace provided`");
             }
+            if (files is null)
+            {
+                files = Request.Form.Files.First();
+            }
             if (entry.FileName is null)
             {
-                entry.FileName = file.FileName;
+                entry.FileName = files.FileName;
             }
-            entry.ExtName = Path.GetExtension(file.FileName);
+            entry.ExtName = Path.GetExtension(files.FileName);
             using var content = new MultipartFormDataContent();
-            using var stream = file.OpenReadStream();
+            using var stream = files.OpenReadStream();
             entry.Size = (int)stream.Length;
             content.Add(new StreamContent(stream), "file");
             await client.PostAsync($"http://volume:18080/{entry.SeaweedId}", content);
