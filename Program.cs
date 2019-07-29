@@ -3,47 +3,55 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using WorkNet.Agent.Worker;
+using Docker.DotNet;
+using Docker.DotNet.Models;
 
 namespace WorkNet.Agent
 {
-    class Program{
-    public static void Main()
+    class Program
     {
-        var factory = new ConnectionFactory() { HostName = "localhost", UserName = "server", Password="server" };
-        using(var connection = factory.CreateConnection())
-        using(var channel = connection.CreateModel())
+        public static async Task Main()
         {
-            channel.QueueDeclare(queue: "task_queue",
-                                 durable: true,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
 
-            channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+            var factory = new ConnectionFactory() { HostName = "localhost", UserName = "server", Password = "server" };
+            var worker = new DockerWorker();
 
-            Console.WriteLine(" [*] Waiting for messages.");
-
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += (model, ea) =>
+            using (var connection = factory.CreateConnection())
+            using (var channel = connection.CreateModel())
             {
-                var body = ea.Body;
-                var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine(" [x] Received {0}", message);
+                channel.QueueDeclare(queue: "task_queue",
+                                     durable: true,
+                                     exclusive: false,
+                                     autoDelete: false,
+                                     arguments: null);
 
-                
-                Thread.Sleep(1000);
+                channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 
-                Console.WriteLine(" [x] Done");
+                Console.WriteLine(" [*] Waiting for messages.");
 
-                channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-            };
-            channel.BasicConsume(queue: "task_queue",
-                                 autoAck: false,
-                                 consumer: consumer);
+                var consumer = new EventingBasicConsumer(channel);
+                consumer.Received += (model, ea) =>
+                {
+                    var body = ea.Body;
+                    var message = Encoding.UTF8.GetString(body);
+                    Console.WriteLine(" [x] Received {0}", message);
 
-            Console.WriteLine(" Press [enter] to exit.");
-            Console.ReadLine();
+
+                    Task.WaitAll(worker.ExecTaskGroup(Int32.Parse(message)));
+
+                    Console.WriteLine(" [x] Done");
+
+                    channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                };
+                channel.BasicConsume(queue: "task_queue",
+                                     autoAck: false,
+                                     consumer: consumer);
+
+                Console.WriteLine(" Press [enter] to exit.");
+                Console.ReadLine();
+            }
         }
-    }
     }
 }
