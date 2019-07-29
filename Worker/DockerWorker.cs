@@ -83,12 +83,11 @@ namespace WorkNet.Agent.Worker
                 foreach (var parameter in info.Parameters)
                 {
                     Directory.CreateDirectory("data/out");
-                    Console.WriteLine(Smart.Format(info.Execution, parameter));
 
                     var (stdout, stderr) = await docker.RunCommandInContainerAsync(containerId,
                         new[] { "sh", "-c", Smart.Format(info.Execution, parameter)
                     });
-                    Task.WaitAll(File.WriteAllTextAsync("data/out/wn_stdout.txt", stdout), File.WriteAllTextAsync("data/out/wn_stderr.txt", stderr));
+                    Task.WaitAll(File.WriteAllTextAsync("data/out/wn_stdout.txt", Smart.Format(info.Execution, parameter) + "\n" + stdout), File.WriteAllTextAsync("data/out/wn_stderr.txt", stderr));
                     // Submit Result
                     await Sumbit(info.Id, index);
                     Directory.Delete("data/out", true);
