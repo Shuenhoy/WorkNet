@@ -12,7 +12,7 @@ namespace WorkNet.Agent
 {
     class Program
     {
-        public static async Task Main()
+        public static void Main()
         {
 
             var factory = new ConnectionFactory() { HostName = "localhost", UserName = "server", Password = "server" };
@@ -38,8 +38,21 @@ namespace WorkNet.Agent
                     var message = Encoding.UTF8.GetString(body);
                     Console.WriteLine(" [x] Received {0}", message);
 
+                    try
+                    {
+                        worker.ExecTaskGroup(Int32.Parse(message)).Wait();
+                    }
+                    catch (AggregateException ae)
+                    {
+                        foreach (var e in ae.InnerExceptions)
+                        {
 
-                    Task.WaitAll(worker.ExecTaskGroup(Int32.Parse(message)));
+                            throw e;
+
+                        }
+                    }
+
+
 
                     Console.WriteLine(" [x] Done");
 

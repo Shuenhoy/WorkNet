@@ -6,6 +6,23 @@ using System.Threading.Tasks;
 
 namespace WorkNet.Agent.Worker
 {
+    class Defer : IDisposable
+    {
+        private readonly Action _disposal;
+        static public Defer defer(Action disposal)
+        {
+            return new Defer(disposal);
+        }
+        public Defer(Action disposal)
+        {
+            _disposal = disposal;
+        }
+
+        void IDisposable.Dispose()
+        {
+            _disposal();
+        }
+    }
     static class DockerHelperExtension
     {
         public static async Task StopContainer(this DockerClient client, string id)
@@ -26,6 +43,7 @@ namespace WorkNet.Agent.Worker
                 AttachStderr = true,
                 AttachStdout = true,
                 OpenStdin = true,
+                WorkingDir = "/app",
                 HostConfig = new HostConfig()
                 {
                     Binds = binds
