@@ -71,7 +71,25 @@ namespace WorkNet.Server.Controllers
             if (group == null) return NotFound();
             return GetGroutInfo(group);
         }
-
+        [HttpPost("result/{id}")]
+        public async Task<ActionResult<string>> UpdateResult(int id, [FromBody] List<int> ids)
+        {
+            var group = await context.TaskGroups.FindAsync(id);
+            if (group == null)
+            {
+                return NotFound();
+            }
+            var i = 0;
+            foreach (var single in group.SingleTasks)
+            {
+                single.Result = ids[i];
+                i++;
+            }
+            group.Status = 1;
+            group.UserTask.SubFinished++;
+            await context.SaveChangesAsync();
+            return "ok";
+        }
         [HttpPost]
         public async Task<ActionResult<UserTask>> Submit([FromBody] TaskSubmit input)
         {

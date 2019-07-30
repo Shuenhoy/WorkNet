@@ -43,6 +43,8 @@ namespace WorkNet.Server.Migrations
 
                     b.Property<int[]>("Pulls");
 
+                    b.Property<int>("Result");
+
                     b.Property<int?>("TaskGroupId");
 
                     b.HasKey("SingleTaskId");

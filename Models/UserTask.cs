@@ -41,6 +41,7 @@ namespace WorkNet.Server.Models
             get => JsonDocument.Parse(Parameters is null ? "{}" : Parameters).RootElement;
             set => Parameters = value.ToString();
         }
+        public int Result { get; set; }
 
         public int[] Pulls { get; set; }
     }

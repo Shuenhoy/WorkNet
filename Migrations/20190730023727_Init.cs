@@ -65,6 +65,7 @@ namespace WorkNet.Server.Migrations
                     SingleTaskId = table.Column<long>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
                     Parameters = table.Column<string>(type: "json", nullable: true),
+                    Result = table.Column<int>(nullable: false),
                     Pulls = table.Column<int[]>(nullable: true),
                     TaskGroupId = table.Column<int>(nullable: true)
                 },

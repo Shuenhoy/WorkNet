@@ -10,7 +10,7 @@ using WorkNet.Server.Models;
 namespace WorkNet.Server.Migrations
 {
     [DbContext(typeof(ServerContext))]
-    [Migration("20190729080544_Init")]
+    [Migration("20190730023727_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,6 +44,8 @@ namespace WorkNet.Server.Migrations
                         .HasColumnType("json");
 
                     b.Property<int[]>("Pulls");
+
+                    b.Property<int>("Result");
 
                     b.Property<int?>("TaskGroupId");
 
