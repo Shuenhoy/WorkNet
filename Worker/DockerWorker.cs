@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
@@ -80,6 +81,7 @@ namespace WorkNet.Agent.Worker
 
                 });
                 int index = 0;
+                var results = new List<int>();
                 foreach (var parameter in info.Parameters)
                 {
                     Directory.CreateDirectory("data/out");
@@ -89,10 +91,12 @@ namespace WorkNet.Agent.Worker
                     });
                     Task.WaitAll(File.WriteAllTextAsync("data/out/wn_stdout.txt", Smart.Format(info.Execution, parameter) + "\n" + stdout), File.WriteAllTextAsync("data/out/wn_stderr.txt", stderr));
                     // Submit Result
-                    await Sumbit(info.Id, index);
+                    results.Add(await Sumbit(info.Id, index));
                     Directory.Delete("data/out", true);
                     index++;
                 }
+                var respup = await client.PostAsync($"{server}/api/tasks/result/{info.Id}", new StringContent(JsonSerializer.Serialize(results), Encoding.UTF8, "application/json"));
+                respup.EnsureSuccessStatusCode();
             }
             catch (Exception err)
             {
@@ -111,31 +115,24 @@ namespace WorkNet.Agent.Worker
                 }
             }
         }
-        async Task Sumbit(long groupId, int singleId)
+        async Task<int> Sumbit(long groupId, int singleId)
         {
-            try
+
+            File.Delete($"data/result_{groupId}_{singleId}.zip");
+            ZipFile.CreateFromDirectory("data/out", $"data/result_{groupId}_{singleId}.zip");
+            using var content = new MultipartFormDataContent();
+            using var stream = new FileStream($"data/result_{groupId}_{singleId}.zip", FileMode.Open, FileAccess.Read);
+            content.Add(new StringContent(JsonSerializer.Serialize(new { Namespace = "__worknet_result" })), "payload");
+            content.Add(new StreamContent(stream), "files", $"result_{groupId}_{singleId}.zip");
+
+            var resp = await client.PostAsync($"{fileProvider}/api/file", content);
+            var ret = await resp.Content.ReadAsStringAsync();
+            var file = JsonSerializer.Deserialize<FileEntry>(ret, new JsonSerializerOptions()
             {
-                File.Delete($"data/result_{groupId}_{singleId}.zip");
-                ZipFile.CreateFromDirectory("data/out", $"data/result_{groupId}_{singleId}.zip");
-                using var content = new MultipartFormDataContent();
-                using var stream = new FileStream($"data/result_{groupId}_{singleId}.zip", FileMode.Open, FileAccess.Read);
-                content.Add(new StringContent(JsonSerializer.Serialize(new { Namespace = "__worknet_result" })), "payload");
-                content.Add(new StreamContent(stream), "files", $"result_{groupId}_{singleId}.zip");
-
-                var resp = await client.PostAsync($"{fileProvider}/api/file", content);
-                var ret = await resp.Content.ReadAsStringAsync();
-                var file = JsonSerializer.Deserialize<FileEntry>(ret, new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-                File.Delete($"data/result_{groupId}_{singleId}.zip");
-
-            }
-            catch (Exception err)
-            {
-                Console.WriteLine(err);
-            }
-
+                PropertyNameCaseInsensitive = true
+            });
+            File.Delete($"data/result_{groupId}_{singleId}.zip");
+            return file.FileEntryID;
         }
         void RemoveFiles()
         {
