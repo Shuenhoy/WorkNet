@@ -49,7 +49,7 @@ namespace WorkNet.FileProvider.Controllers
             }
             var resp = await client.GetAsync($"http://volume:18080/{entry.SeaweedId}");
             var stream = await resp.Content.ReadAsStreamAsync();
-            return File(stream, resp.Content.Headers.ContentType.MediaType);
+            return File(stream, resp.Content.Headers.ContentType.MediaType, entry.FileName);
 
         }
         [HttpGet("@where/{cond}")]
