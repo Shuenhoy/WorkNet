@@ -41,22 +41,26 @@ namespace WorkNet.Agent
                     try
                     {
                         worker.ExecTaskGroup(Int32.Parse(message)).Wait();
+                        Console.WriteLine(" [x] Done");
+
+                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     }
                     catch (AggregateException ae)
                     {
                         foreach (var e in ae.InnerExceptions)
                         {
 
-                            throw e;
+                            Console.WriteLine(e);
 
                         }
+                        Console.WriteLine(" [x] Done");
+
+                        channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, true);
                     }
 
 
 
-                    Console.WriteLine(" [x] Done");
 
-                    channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                 };
                 channel.BasicConsume(queue: "task_queue",
                                      autoAck: false,
