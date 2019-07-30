@@ -14,12 +14,15 @@ namespace WorkNet.Server.Models
         public long ExecutorId { get; set; }
         public string Image { get; set; }
         public string Execution { get; set; }
+        [JsonPropertyName("Executor")]
+        public int? OpExecutor { get; set; }
     }
     public class UserTask
     {
         public int UserTaskId { get; set; }
         public string Image { get; set; }
         public string Execution { get; set; }
+        public int? Executor { get; set; }
         public int SubFinished { get; set; }
         public int SubTotal { get; set; }
         public DateTime SubmitTime { get; set; }
@@ -41,7 +44,7 @@ namespace WorkNet.Server.Models
             get => JsonDocument.Parse(Parameters is null ? "{}" : Parameters).RootElement;
             set => Parameters = value.ToString();
         }
-        public int Result { get; set; }
+        public int? Result { get; set; }
 
         public int[] Pulls { get; set; }
     }
@@ -49,9 +52,9 @@ namespace WorkNet.Server.Models
     {
         public int TaskGroupId { get; set; }
         public virtual ICollection<SingleTask> SingleTasks { get; set; }
-
-        public int Status;
-        public int UserTaskId;
+        public string Assignment { get; set; }
+        public int Status { get; set; }
+        public int UserTaskId { get; set; }
         [JsonIgnore]
 
         public virtual UserTask UserTask { get; set; }

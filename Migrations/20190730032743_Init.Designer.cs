@@ -10,7 +10,7 @@ using WorkNet.Server.Models;
 namespace WorkNet.Server.Migrations
 {
     [DbContext(typeof(ServerContext))]
-    [Migration("20190730023727_Init")]
+    [Migration("20190730032743_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,7 +45,7 @@ namespace WorkNet.Server.Migrations
 
                     b.Property<int[]>("Pulls");
 
-                    b.Property<int>("Result");
+                    b.Property<int?>("Result");
 
                     b.Property<int?>("TaskGroupId");
 
@@ -61,11 +61,15 @@ namespace WorkNet.Server.Migrations
                     b.Property<int>("TaskGroupId")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<int?>("UserTaskId1");
+                    b.Property<string>("Assignment");
+
+                    b.Property<int>("Status");
+
+                    b.Property<int>("UserTaskId");
 
                     b.HasKey("TaskGroupId");
 
-                    b.HasIndex("UserTaskId1");
+                    b.HasIndex("UserTaskId");
 
                     b.ToTable("TaskGroups");
                 });
@@ -76,6 +80,8 @@ namespace WorkNet.Server.Migrations
                         .ValueGeneratedOnAdd();
 
                     b.Property<string>("Execution");
+
+                    b.Property<int?>("Executor");
 
                     b.Property<string>("Image");
 
@@ -101,7 +107,8 @@ namespace WorkNet.Server.Migrations
                 {
                     b.HasOne("WorkNet.Server.Models.UserTask", "UserTask")
                         .WithMany("SubTasks")
-                        .HasForeignKey("UserTaskId1");
+                        .HasForeignKey("UserTaskId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 #pragma warning restore 612, 618
         }

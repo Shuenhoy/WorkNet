@@ -46,6 +46,7 @@ namespace WorkNet.Server.Controllers
             public long Id { get; set; }
             public string Image { get; set; }
             public string Execution { get; set; }
+            public int? Executor { get; set; }
             public List<JsonElement> Parameters { get; set; }
             public List<int> Pulls { get; set; }
         }
@@ -62,7 +63,7 @@ namespace WorkNet.Server.Controllers
 
                 }
             }
-            return new GroupInfo { Image = group.UserTask.Image, Execution = group.UserTask.Execution, Parameters = parameters, Pulls = pulls.ToList(), Id = group.TaskGroupId };
+            return new GroupInfo { Image = group.UserTask.Image, Execution = group.UserTask.Execution, Executor = group.UserTask.Executor, Parameters = parameters, Pulls = pulls.ToList(), Id = group.TaskGroupId };
         }
         [HttpGet("@group/{id}")]
         public async Task<ActionResult<GroupInfo>> GetGroup(int id)
@@ -93,12 +94,14 @@ namespace WorkNet.Server.Controllers
         [HttpPost]
         public async Task<ActionResult<UserTask>> Submit([FromBody] TaskSubmit input)
         {
+
             var groups = taskDivider.Divide(input.tasks);
             var task = new UserTask()
             {
                 SubFinished = 0,
                 Image = input.executor.Image,
                 Execution = input.executor.Execution,
+                Executor = input.executor.OpExecutor,
                 SubTotal = groups.Count(),
                 SubTasks = groups,
                 SubmitTime = DateTime.Now

@@ -30,6 +30,7 @@ namespace WorkNet.Server.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
                     Image = table.Column<string>(nullable: true),
                     Execution = table.Column<string>(nullable: true),
+                    Executor = table.Column<int>(nullable: true),
                     SubFinished = table.Column<int>(nullable: false),
                     SubTotal = table.Column<int>(nullable: false),
                     SubmitTime = table.Column<DateTime>(nullable: false)
@@ -45,17 +46,19 @@ namespace WorkNet.Server.Migrations
                 {
                     TaskGroupId = table.Column<int>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
-                    UserTaskId1 = table.Column<int>(nullable: true)
+                    Assignment = table.Column<string>(nullable: true),
+                    Status = table.Column<int>(nullable: false),
+                    UserTaskId = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TaskGroups", x => x.TaskGroupId);
                     table.ForeignKey(
-                        name: "FK_TaskGroups_UserTasks_UserTaskId1",
-                        column: x => x.UserTaskId1,
+                        name: "FK_TaskGroups_UserTasks_UserTaskId",
+                        column: x => x.UserTaskId,
                         principalTable: "UserTasks",
                         principalColumn: "UserTaskId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -65,7 +68,7 @@ namespace WorkNet.Server.Migrations
                     SingleTaskId = table.Column<long>(nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.SerialColumn),
                     Parameters = table.Column<string>(type: "json", nullable: true),
-                    Result = table.Column<int>(nullable: false),
+                    Result = table.Column<int>(nullable: true),
                     Pulls = table.Column<int[]>(nullable: true),
                     TaskGroupId = table.Column<int>(nullable: true)
                 },
@@ -86,9 +89,9 @@ namespace WorkNet.Server.Migrations
                 column: "TaskGroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskGroups_UserTaskId1",
+                name: "IX_TaskGroups_UserTaskId",
                 table: "TaskGroups",
-                column: "UserTaskId1");
+                column: "UserTaskId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
