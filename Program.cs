@@ -54,8 +54,9 @@ namespace WorkNet.Agent
 
                         }
                         Console.WriteLine(" [x] Done");
+                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 
-                        channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, true);
+                        // channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, true);
                     }
 
 

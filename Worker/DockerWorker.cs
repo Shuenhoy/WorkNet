@@ -63,6 +63,7 @@ namespace WorkNet.Agent.Worker
 
         public async Task ExecTaskGroup(int id)
         {
+            RemoveFiles();
             Console.WriteLine($"{server}/api/tasks/@group/{id}");
             var info = await client
                 .GetAsync($"{server}/api/tasks/@group/{id}")
@@ -112,10 +113,7 @@ namespace WorkNet.Agent.Worker
                 var respup = await client.PostAsync($"{server}/api/tasks/result/{info.Id}", new StringContent(JsonSerializer.Serialize(results), Encoding.UTF8, "application/json"));
                 respup.EnsureSuccessStatusCode();
             }
-            catch (Exception err)
-            {
-                Console.WriteLine(err);
-            }
+
             finally
             {
                 try
@@ -149,10 +147,13 @@ namespace WorkNet.Agent.Worker
         }
         void RemoveFiles()
         {
-            Directory.Delete("data/pulls", true);
-            Directory.Delete("data/app", true);
-            Directory.Delete("data/results", true);
-
+            try
+            {
+                Directory.Delete("data/pulls", true);
+                Directory.Delete("data/app", true);
+                Directory.Delete("data/results", true);
+            }
+            catch (Exception exp) { }
 
         }
         async Task PullFiles(List<int> pulls, int? executor)
