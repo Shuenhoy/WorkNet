@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using LanguageExt;
 using LanguageExt.Core;
 using LanguageExt.Parsec;
+using System.Collections.Concurrent;
 
 using static LanguageExt.Prelude;
 using static LanguageExt.List;
@@ -82,14 +83,10 @@ namespace WorkNet.Client.Commands
         static Parser<Argument> iterArgument =
             from _0 in str("?[")
             from _01 in spaces
-            from arguments in many(attempt(
-                from x in asString(many1(noneOf(" ]")))
-                from _ in spaces1
-                select x))
-            from last in asString(many1(noneOf(" ]")))
+            from arguments in sepEndBy1(asString(many1(noneOf(" ]"))), spaces1)
             from _00 in spaces
             from _1 in ch(']')
-            select new IterArgument() { Iter = arguments.Add(last) } as Argument;
+            select new IterArgument() { Iter = arguments } as Argument;
         static Parser<int> intLit =
                    from d in asString(many1(digit))
                    select Int32.Parse(d);
@@ -202,7 +199,9 @@ namespace WorkNet.Client.Commands
                 return arg switch
                 {
                     PlainArgument p => Seq1(Seq1(p.Arg)),
-                    IterArgument i => i.Iter.Map(x => Seq1(x)),
+                    IterArgument i => i.Iter.Count > 0 && i.Iter.First() == "@" ?
+                        i.Iter.Skip(1).Map(x => Seq1("@" + x))
+                        : i.Iter.Map(x => Seq1(x)),
                     RangeArgument<int> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => Seq1(x)),
                     RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => Seq1(x))
 
@@ -214,7 +213,9 @@ namespace WorkNet.Client.Commands
                 return arg switch
                 {
                     PlainArgument p => next.Map(x => x.Add(p.Arg)),
-                    IterArgument i => next.Map(x => i.Iter.Map(y => x.Add(y))).Flatten(),
+                    IterArgument i => i.Iter.Count > 0 && i.Iter.First() == "@"
+                        ? next.Map(x => i.Iter.Skip(1).Map(y => x.Add("@" + y))).Flatten()
+                        : next.Map(x => i.Iter.Map(y => x.Add(y))).Flatten(),
                     RangeArgument<int> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => next.Map(y => y.Add(x))).Flatten(),
                     RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => next.Map(y => y.Add(x))).Flatten()
                 };
@@ -323,7 +324,7 @@ namespace WorkNet.Client.Commands
 
                     free = false;
                 }
-                taskArguments.AddRange(GenerateArguments(rawArgs, 0).Map(x => x.ToList()).ToList());
+                taskArguments.AddRange(GenerateArguments(rawArgs, 0).Map(x => x.Rev().ToList()).ToList());
             }
             var tasksPList = new List<SingleTaskP>();
             var allPulls = new System.Collections.Generic.HashSet<string>();
@@ -333,16 +334,23 @@ namespace WorkNet.Client.Commands
                 var pulls = new List<string>();
                 foreach (var (value, name) in task.Zip(arguments))
                 {
-                    parameters[name] = value;
                     if (fileArguments.Contains(name))
                     {
                         pulls.Add(value);
                         allPulls.Add(value);
+                        parameters[name] = value;
+
                     }
                     else if (value.StartsWith('@'))
                     {
                         pulls.Add(value.Substring(1));
                         allPulls.Add(value.Substring(1));
+                        parameters[name] = value.Substring(1);
+
+                    }
+                    else
+                    {
+                        parameters[name] = value;
 
                     }
 
@@ -350,7 +358,7 @@ namespace WorkNet.Client.Commands
                 tasksPList.Add(new SingleTaskP() { Parameters = parameters, Pulls = pulls });
             }
 
-            var fileToId = new Dictionary<string, int>();
+            var fileToId = new ConcurrentDictionary<string, int>();
             Task.WaitAll(allPulls.Map(async x =>
             {
                 int res = await Upload(x);
@@ -362,7 +370,7 @@ namespace WorkNet.Client.Commands
             if (!File.Exists("wn_executor.zip") || rezip)
             {
                 ZipHelper.CreateFromDirectory(
-                    Directory.GetCurrentDirectory(), "wn_executor.zip", CompressionLevel.Fastest, true, Encoding.UTF8,
+                    Directory.GetCurrentDirectory(), "wn_executor.zip", CompressionLevel.Fastest, false, Encoding.UTF8,
                     fileName => !fileName.Contains(@"wn_")
                 );
             }
@@ -401,7 +409,7 @@ namespace WorkNet.Client.Commands
             {
                 Image = opts.Image,
                 Execution = opts.Commands.First(),
-                Tasks = Seq1(String.Join(' ', opts.Commands.Take(1))).ToList()
+                Tasks = Seq1(String.Join(' ', opts.Commands.Skip(1))).ToList()
             }, opts.ReZip, true);
         }
     }
