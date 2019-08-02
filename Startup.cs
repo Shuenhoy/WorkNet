@@ -67,6 +67,10 @@ namespace WorkNet.Server
             {
                 endpoints.MapControllers();
             });
+            using (var scope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            {
+                scope.ServiceProvider.GetService<Models.FileEntryContext>().Database.Migrate();
+            }
         }
     }
 }
