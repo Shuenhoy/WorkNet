@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "15001:80"
+    networks:
+      db: {}
+      rbmq: {}
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      rbmq: {}
+    ports:
+      - 15672:15672
+      - 5672:5672
+  database:
+    image: postgres:alpine
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+      
+    environment:
+      POSTGRES_USER: postgre
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    networks:
+      db: {}
+    
+  
+networks:
+  db:
+  rbmq:

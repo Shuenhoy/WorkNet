@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  web:
+    stdin_open: true
+    tty: true
+    build: 
+      context: .
+      dockerfile: dev.Dockerfile
+    ports:
+      - "15002:5000"
+    volumes:
+      - .:/app
+      - /app/data
+    networks:
+      db: {}
+      rbmq: {}
