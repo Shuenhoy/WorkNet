@@ -11,37 +11,13 @@ using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using LanguageExt;
 using SmartFormat;
-
+using WorkNet.Common.Models;
 
 using System.Linq;
 
 namespace WorkNet.Agent.Worker
 {
-    class GroupInfo
-    {
-        public long Id { get; set; }
-        public string Image { get; set; }
-        public string Execution { get; set; }
-        public int? Executor { get; set; }
 
-        public List<Dictionary<string, JsonElement>> Parameters { get; set; }
-        public List<int> Pulls { get; set; }
-    }
-    public class FileEntry
-    {
-        public int FileEntryID { get; set; }
-        public string SeaweedId { get; set; }
-
-        public JsonElement Metadata;
-
-        public int Size { get; set; }
-        public string ETag { get; set; }
-        public List<string> Tags { get; set; }
-        public string ExtName { get; set; }
-        public string FileName { get; set; }
-        public string Namespace { get; set; }
-
-    }
     public class DockerWorker
     {
         DockerClient docker;

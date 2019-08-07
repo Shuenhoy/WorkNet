@@ -22,7 +22,9 @@ using static LanguageExt.Parsec.Token;
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using WorkNet.Client;
+using WorkNet.Common.Models;
 
 namespace WorkNet.Client.Commands
 {

@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using WorkNet.FileProvider.Models;
+using WorkNet.Common.Models;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
+
 using LanguageExt;
 using System.IO;
 using System.Linq.Dynamic.Core;

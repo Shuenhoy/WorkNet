@@ -8,6 +8,7 @@ using WorkNet.Server.Models;
 using WorkNet.Server.Services;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using WorkNet.Common.Models;
 
 namespace WorkNet.Server.Controllers
 {
@@ -35,20 +36,6 @@ namespace WorkNet.Server.Controllers
             var task = await context.UserTasks.FindAsync(id);
             if (task == null) return NotFound();
             return task;
-        }
-        public class TaskSubmit
-        {
-            public Executor executor { get; set; }
-            public List<SingleTask> tasks { get; set; }
-        }
-        public class GroupInfo
-        {
-            public long Id { get; set; }
-            public string Image { get; set; }
-            public string Execution { get; set; }
-            public int? Executor { get; set; }
-            public List<JsonElement> Parameters { get; set; }
-            public List<int> Pulls { get; set; }
         }
         public GroupInfo GetGroutInfo(TaskGroup group)
         {

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using WorkNet.Server.Models;
+using WorkNet.Common.Models;
 
 namespace WorkNet.Server.Controllers
 {

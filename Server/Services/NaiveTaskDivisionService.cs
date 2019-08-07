@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 using WorkNet.Server.Models;
+using WorkNet.Common.Models;
+
 namespace WorkNet.Server.Services
 {
     public class NaiveTaskDivisionService : ITaskDivisionService

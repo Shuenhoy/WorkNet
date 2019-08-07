@@ -1,6 +1,9 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using WorkNet.Common.Models;
+
+
 namespace WorkNet.Server.Models
 {
     public class ServerContext : DbContext

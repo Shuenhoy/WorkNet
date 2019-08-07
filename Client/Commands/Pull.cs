@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.IO.Compression;
 using LanguageExt;
 using System.Linq;
+using WorkNet.Common.Models;
 
 namespace WorkNet.Client.Commands
 {

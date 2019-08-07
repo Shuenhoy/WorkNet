@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using WorkNet.Server.Models;
+using WorkNet.Common.Models;
 
 namespace WorkNet.Server.Services
 {

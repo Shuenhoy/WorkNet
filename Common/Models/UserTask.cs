@@ -5,8 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 using System.Text.Json.Serialization;
 
-using Microsoft.EntityFrameworkCore;
-namespace WorkNet.Server.Models
+namespace WorkNet.Common.Models
 {
 
     public class Executor
