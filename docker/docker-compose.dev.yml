@@ -1,16 +1,17 @@
 version: '3'
 
 services:
-  dev:
+  web:
     stdin_open: true
     tty: true
     build: 
-      context: .
-      dockerfile: dev.Dockerfile
+      context: ..
+      dockerfile: docker/dev.DockerFile
     ports:
       - "15000:5000"
     volumes:
-      - .:/app
+      - ..:/app
     networks:
-      seaweedfs: {}
-      db: {}
+      worknet: {}
+networks:
+  worknet:
