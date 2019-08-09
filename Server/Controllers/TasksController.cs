@@ -59,6 +59,20 @@ namespace WorkNet.Server.Controllers
             if (group == null) return NotFound();
             return GetGroutInfo(group);
         }
+        [HttpPost("seterror/{id}")]
+        public async Task<ActionResult<string>> UpdateFail(int id, [FromBody] string message)
+        {
+            var group = await context.TaskGroups.FindAsync(id);
+            if (group == null)
+            {
+                return NotFound();
+            }
+            group.ErrorMessage = message;
+            group.Status = TaskGroupStatus.Error;
+            group.UserTask.SubFinished++;
+            await context.SaveChangesAsync();
+            return "ok";
+        }
         [HttpPost("result/{id}")]
         public async Task<ActionResult<string>> UpdateResult(int id, [FromBody] List<int> ids)
         {
@@ -73,7 +87,7 @@ namespace WorkNet.Server.Controllers
                 single.Result = ids[i];
                 i++;
             }
-            group.Status = 1;
+            group.Status = TaskGroupStatus.Success;
             group.UserTask.SubFinished++;
             await context.SaveChangesAsync();
             return "ok";

@@ -32,8 +32,8 @@ namespace WorkNet.Agent.Worker
                    new Uri("unix:///var/run/docker.sock"))
                .CreateClient();
             workDir = Directory.GetCurrentDirectory();
-            server = AppConfigurationServices.Configuration["server"];
-            fileProvider = AppConfigurationServices.Configuration["fileProvider"];
+            server = AppConfigurationServices.Server;
+            fileProvider = AppConfigurationServices.FileProvider;
         }
 
 
@@ -129,7 +129,7 @@ namespace WorkNet.Agent.Worker
                 Directory.Delete("data/app", true);
                 Directory.Delete("data/results", true);
             }
-            catch (Exception exp) { }
+            catch (Exception _) { }
 
         }
         async Task PullFiles(List<int> pulls, int? executor)

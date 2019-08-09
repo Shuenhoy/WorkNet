@@ -78,8 +78,16 @@ namespace WorkNet.Agent.Worker
 
                 Cmd = commandTokens
             });
-
-            var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false);
+            var task = client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false);
+            if (await Task.WhenAny(task, Task.Delay(AppConfigurationServices.Timeout)) != task)
+            {
+                await client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()
+                {
+                    Force = true
+                });
+                throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
+            }
+            var multiplexedStream = task.Result;
 
             return await multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
         }

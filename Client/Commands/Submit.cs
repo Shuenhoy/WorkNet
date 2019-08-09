@@ -400,9 +400,11 @@ namespace WorkNet.Client.Commands
                 return -1;
             }
             var content = JsonSerializer.Deserialize<TaskConfig>(File.ReadAllText(defaultFile));
+
+            int ret = SubmitFromConfig(content, opts.ReZip, false);
             File.WriteAllText(defaultFile, JsonSerializer.Serialize(content, jsonOpt));
 
-            return SubmitFromConfig(content, opts.ReZip, false);
+            return ret;
         }
 
         public static int Run(RunOptions opts)

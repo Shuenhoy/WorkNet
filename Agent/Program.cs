@@ -36,11 +36,12 @@ namespace WorkNet.Agent
                 {
                     var body = ea.Body;
                     var message = Encoding.UTF8.GetString(body);
+                    var id = Int32.Parse(message);
                     Console.WriteLine(" [x] Received {0}", message);
 
                     try
                     {
-                        worker.ExecTaskGroup(Int32.Parse(message)).Wait();
+                        worker.ExecTaskGroup(id).Wait();
                         Console.WriteLine(" [x] Done");
 
                         channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
@@ -49,9 +50,7 @@ namespace WorkNet.Agent
                     {
                         foreach (var e in ae.InnerExceptions)
                         {
-
                             Console.WriteLine(e);
-
                         }
                         Console.WriteLine(" [x] Done");
                         channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);

@@ -47,13 +47,21 @@ namespace WorkNet.Common.Models
 
         public int[] Pulls { get; set; }
     }
+    public enum TaskGroupStatus
+    {
+        Waiting = 0,
+        Processing = 1,
+        Success = 2,
+        Error = 3
+    }
     public class TaskGroup
     {
         public int TaskGroupId { get; set; }
         public virtual ICollection<SingleTask> SingleTasks { get; set; }
         public string Assignment { get; set; }
-        public int Status { get; set; }
+        public TaskGroupStatus Status { get; set; }
         public int UserTaskId { get; set; }
+        public string ErrorMessage { get; set; }
         [JsonIgnore]
 
         public virtual UserTask UserTask { get; set; }
