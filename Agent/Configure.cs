@@ -9,7 +9,7 @@ namespace WorkNet.Agent
         public static IConfiguration Configuration { get; set; }
         public static string FileProvider { get => Configuration["fileProvider"]; }
         public static string Server { get => Configuration["server"]; }
-        public static int Timeout { get => Int32.Parse(Configuration["timeout"]) * 1000; }
+        public static int Timeout { get => Int32.Parse(Configuration["timeout"]); }
         static AppConfigurationServices()
         {
             Configuration = new ConfigurationBuilder()

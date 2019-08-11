@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WorkNet.Server.Models;
@@ -9,9 +10,10 @@ using WorkNet.Server.Models;
 namespace WorkNet.Server.Migrations
 {
     [DbContext(typeof(ServerContext))]
-    partial class ServerContextModelSnapshot : ModelSnapshot
+    [Migration("20190811115811_update")]
+    partial class update
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

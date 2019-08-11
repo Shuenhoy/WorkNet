@@ -78,18 +78,18 @@ namespace WorkNet.Agent.Worker
 
                 Cmd = commandTokens
             });
-            var task = client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false);
+
+
+            var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;
+
+            var task = multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
             if (await Task.WhenAny(task, Task.Delay(AppConfigurationServices.Timeout)) != task)
             {
-                await client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()
-                {
-                    Force = true
-                });
-                throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
-            }
-            var multiplexedStream = task.Result;
 
-            return await multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
+                throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
+
+            }
+            return task.Result;
         }
         public static Task<(string stdout, string stderr)> RunCommandInContainerAsync(this DockerClient client, string containerId, string command)
         {

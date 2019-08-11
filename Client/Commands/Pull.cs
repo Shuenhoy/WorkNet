@@ -48,6 +48,7 @@ namespace WorkNet.Client.Commands
                 .Bind(x => x.Content.ReadAsStringAsync())
                 .Map(x =>
                 {
+
                     return JsonSerializer.Deserialize<UserTask>(x, jsonOpt);
                 });
             tsk.Wait();
@@ -57,7 +58,19 @@ namespace WorkNet.Client.Commands
                 Console.WriteLine($"INFO: The task is in process. {tsk.Result.SubFinished}/{tsk.Result.SubTotal} done");
                 return 0;
             }
-            var pulls = tsk.Result.SubTasks.Map(x => x.SingleTasks.Map(y => y.Result.Value)).Flatten().ToList();
+            var pulls = tsk.Result.SubTasks.Map(x =>
+            {
+                if (x.Status == TaskGroupStatus.Error)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"INFO: The task group {x.TaskGroupId} ends in error: {x.ErrorMessage}");
+                    return Enumerable.Empty<int>();
+                }
+                else
+                {
+                    return x.SingleTasks.Map(y => y.Result.Value);
+                }
+            }).Flatten().ToList();
 
             Directory.CreateDirectory("wn_result");
             Directory.CreateDirectory($"wn_result/{id}");

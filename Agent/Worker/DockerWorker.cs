@@ -36,7 +36,10 @@ namespace WorkNet.Agent.Worker
             fileProvider = AppConfigurationServices.FileProvider;
         }
 
-
+        public async Task SetError(int id, string message)
+        {
+            var resp = await client.PostAsync($"{server}/api/tasks/seterror/{id}", new StringContent(JsonSerializer.Serialize(message), Encoding.UTF8, "application/json"));
+        }
         public async Task ExecTaskGroup(int id)
         {
             RemoveFiles();
@@ -76,9 +79,8 @@ namespace WorkNet.Agent.Worker
                 foreach (var parameter in info.Parameters)
                 {
                     Directory.CreateDirectory("data/out");
-
                     var (stdout, stderr) = await docker.RunCommandInContainerAsync(containerId,
-                        new[] { "sh", "-c", Smart.Format(info.Execution, parameter)
+                        new[] { "sh", "-c", Smart.Format(info.Execution, parameter.EnumerateObject().ToDictionary(x => x.Name, x => x.Value))
                     });
                     Task.WaitAll(File.WriteAllTextAsync("data/out/wn_stdout.txt", Smart.Format(info.Execution, parameter) + "\n" + stdout), File.WriteAllTextAsync("data/out/wn_stderr.txt", stderr));
                     // Submit Result
@@ -98,8 +100,14 @@ namespace WorkNet.Agent.Worker
                 }
                 finally
                 {
-                    await docker.RemoveContainer(containerId);
-                    RemoveFiles();
+                    try
+                    {
+                        await docker.RemoveContainer(containerId);
+                    }
+                    finally
+                    {
+                        RemoveFiles();
+                    }
                 }
             }
         }

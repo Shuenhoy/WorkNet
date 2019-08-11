@@ -4,7 +4,7 @@
 ### FileProvider
 
 ```bash
-docker-compose up -f docker/docker-compose.FileProvider.env.yml -f docker/docker-compose.FileProvider.env.yml
+docker-compose  -f docker/docker-compose.FileProvider.env.yml -f docker/docker-compose.FileProvider.env.yml up -d
 ```
 
 
@@ -13,14 +13,14 @@ docker-compose up -f docker/docker-compose.FileProvider.env.yml -f docker/docker
 * set up the environment
 
 ```bash
-docker-compose up -f docker/docker-compose.Server.env.yml -d
+docker-compose  -f docker/docker-compose.Server.env.yml up -d
 ```
 
 * login http://localhost:15672 with guest:guest
 * add user
 
 ``` bash
-docker-compose up -f docker/docker-compose.Server.yml -d
+docker-compose  -f docker/docker-compose.Server.yml up -d
 ```
 
 

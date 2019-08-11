@@ -48,11 +48,14 @@ namespace WorkNet.Agent
                     }
                     catch (AggregateException ae)
                     {
+                        var error = "";
                         foreach (var e in ae.InnerExceptions)
                         {
                             Console.WriteLine(e);
+                            error += e.ToString();
                         }
                         Console.WriteLine(" [x] Done");
+                        worker.SetError(id, error).Wait();
                         channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 
                         // channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, true);
