@@ -207,7 +207,8 @@ namespace WorkNet.Client.Commands
                         i.Iter.Skip(1).Map(x => Seq1("@" + x))
                         : i.Iter.Map(x => Seq1(x)),
                     RangeArgument<int> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => Seq1(x)),
-                    RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => Seq1(x))
+                    RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => Seq1(x)),
+                    _ => throw new NotSupportedException()
 
                 };
             }
@@ -221,7 +222,8 @@ namespace WorkNet.Client.Commands
                         ? next.Map(x => i.Iter.Skip(1).Map(y => x.Add("@" + y))).Flatten()
                         : next.Map(x => i.Iter.Map(y => x.Add(y))).Flatten(),
                     RangeArgument<int> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => next.Map(y => y.Add(x))).Flatten(),
-                    RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => next.Map(y => y.Add(x))).Flatten()
+                    RangeArgument<float> r => GenList(r.Start, r.End, r.Step, r.Close).Map(x => next.Map(y => y.Add(x))).Flatten(),
+                    _ => throw new NotSupportedException()
                 };
             }
         }

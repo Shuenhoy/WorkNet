@@ -134,7 +134,7 @@ namespace WorkNet.Agent.Worker
                 Directory.Delete("data/app", true);
                 Directory.Delete("data/results", true);
             }
-            catch (Exception _) { }
+            catch (Exception) { }
 
         }
         async Task PullFiles(List<int> pulls, int? executor)

@@ -32,14 +32,14 @@ namespace WorkNet.Agent.Worker
             var image = split[0];
             var tag = split.Length > 1 ? split[1] : "latest";
             Console.WriteLine("try to pull image: " + name);
-            client.Images.CreateImageAsync(new ImagesCreateParameters()
+            await client.Images.CreateImageAsync(new ImagesCreateParameters()
             {
                 FromImage = image,
                 Tag = tag
             }, null, new Progress<JSONMessage>(resp =>
             {
                 Console.WriteLine(resp.Status);
-            })).Wait();
+            }));
             Console.WriteLine("done");
         }
         public static async Task StopContainer(this DockerClient client, string id)
