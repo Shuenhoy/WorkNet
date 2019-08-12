@@ -63,7 +63,10 @@ namespace WorkNet.Agent.Worker
                 WorkingDir = "/app",
                 HostConfig = new HostConfig()
                 {
-                    Binds = binds
+                    Binds = binds,
+                    CPUPeriod = AppConfigurationServices.CpuPeriod,
+                    CPUQuota = AppConfigurationServices.CpuQuota,
+                    Memory = AppConfigurationServices.Memory,
                 }
             });
             Console.WriteLine(ret.ToString());

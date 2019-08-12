@@ -10,6 +10,9 @@ namespace WorkNet.Agent
         public static string FileProvider { get => Configuration["fileProvider"]; }
         public static string Server { get => Configuration["server"]; }
         public static int Timeout { get => Int32.Parse(Configuration["timeout"]); }
+        public static int CpuPeriod { get => Int32.Parse(Configuration["cpuPeriod"]); }
+        public static int CpuQuota { get => Int32.Parse(Configuration["cpuQuota"]); }
+        public static long Memory { get => Int64.Parse(Configuration["memory"]); }
         static AppConfigurationServices()
         {
             Configuration = new ConfigurationBuilder()
