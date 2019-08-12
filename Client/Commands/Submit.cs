@@ -328,7 +328,14 @@ namespace WorkNet.Client.Commands
 
                     free = false;
                 }
-                taskArguments.AddRange(GenerateArguments(rawArgs, 0).Map(x => x.Rev().ToList()).ToList());
+                if (rawArgs.Length() > 0)
+                {
+                    taskArguments.AddRange(GenerateArguments(rawArgs, 0).Map(x => x.Rev().ToList()).ToList());
+                }
+                else
+                {
+                    taskArguments.Add(new List<string>(new[] { "" }));
+                }
             }
             var tasksPList = new List<SingleTaskP>();
             var allPulls = new System.Collections.Generic.HashSet<string>();
