@@ -31,3 +31,11 @@ Setup the environment, then
 ```bash
 docker-compose run -p xx:5000 docker/docker-compose.dev.yml web bash
 ```
+
+## Publish Excutable For Agent and Client
+
+Execute the following commands in their project folders:
+
+```bash
+dotnet publish -r <runtime> -c Release /p:PublishSingleFile=true /p:PublishTrimmed=true
+```
