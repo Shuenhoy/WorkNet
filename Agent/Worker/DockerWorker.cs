@@ -64,6 +64,7 @@ namespace WorkNet.Agent.Worker
 
             try
             {
+                await docker.PullImage(info.Image);
                 containerId = await docker.CreateContainer(info.Image, new string[]{
                     $"{workDir}/data/pulls:/app/wn_pulls",
                     $"{workDir}/data/out:/app/wn_out",
@@ -94,21 +95,17 @@ namespace WorkNet.Agent.Worker
 
             finally
             {
+
                 try
                 {
-                    await docker.StopContainer(containerId);
+                    if (containerId != null)
+                        await docker.RemoveContainer(containerId);
                 }
                 finally
                 {
-                    try
-                    {
-                        await docker.RemoveContainer(containerId);
-                    }
-                    finally
-                    {
-                        RemoveFiles();
-                    }
+                    RemoveFiles();
                 }
+
             }
         }
         async Task<int> Sumbit(long groupId, int singleId)

@@ -52,7 +52,7 @@ namespace WorkNet.Agent
                         foreach (var e in ae.InnerExceptions)
                         {
                             Console.WriteLine(e);
-                            error += e.ToString();
+                            error += e.Message;
                         }
                         Console.WriteLine(" [x] Done");
                         worker.SetError(id, error).Wait();

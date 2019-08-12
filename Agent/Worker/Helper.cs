@@ -25,13 +25,30 @@ namespace WorkNet.Agent.Worker
     }
     static class DockerHelperExtension
     {
+        public static async Task PullImage(this DockerClient client, string name)
+        {
+            var split = name.Split(':');
+            if (split.Length > 2) throw new Exception("incorrect image format!");
+            var image = split[0];
+            var tag = split.Length > 1 ? split[1] : "latest";
+            Console.WriteLine("try to pull image: " + name);
+            client.Images.CreateImageAsync(new ImagesCreateParameters()
+            {
+                FromImage = image,
+                Tag = tag
+            }, null, new Progress<JSONMessage>(resp =>
+            {
+                Console.WriteLine(resp.Status);
+            })).Wait();
+            Console.WriteLine("done");
+        }
         public static async Task StopContainer(this DockerClient client, string id)
         {
             await client.Containers.StopContainerAsync(id, new ContainerStopParameters());
         }
         public static async Task RemoveContainer(this DockerClient client, string id)
         {
-            await client.Containers.RemoveContainerAsync(id, new ContainerRemoveParameters());
+            await client.Containers.RemoveContainerAsync(id, new ContainerRemoveParameters() { Force = true });
         }
         public static async Task<string> CreateContainer(
             this DockerClient client, string image, string[] binds = null)
@@ -49,6 +66,7 @@ namespace WorkNet.Agent.Worker
                     Binds = binds
                 }
             });
+            Console.WriteLine(ret.ToString());
 
             await client.Containers.StartContainerAsync(ret.ID, new ContainerStartParameters());
             return ret.ID;
