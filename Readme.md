@@ -37,5 +37,5 @@ docker-compose run -p xx:5000 docker/docker-compose.dev.yml web bash
 Execute the following commands in their project folders:
 
 ```bash
-dotnet publish -r <runtime> -c Release /p:PublishSingleFile=true /p:PublishTrimmed=true
+dotnet publish -r linux-x64 -c Release
 ```

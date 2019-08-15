@@ -5,7 +5,8 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
       <LangVersion>8.0</LangVersion>
     <NullableReferenceTypes>true</NullableReferenceTypes>
-    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Microsoft.Packaging.Tools.Trimming" Version="1.1.0-preview1-26619-01" />
   </ItemGroup>
-
+<PropertyGroup>
+        <TrimUnusedDependencies>true</TrimUnusedDependencies>
+        <RootPackageReference>false</RootPackageReference>
+    </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
