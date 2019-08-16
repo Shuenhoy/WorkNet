@@ -69,8 +69,14 @@ namespace WorkNet.Agent
                                      autoAck: false,
                                      consumer: consumer);
 
-                Console.WriteLine(" Press [enter] to exit.");
-                Console.ReadLine();
+                Console.WriteLine(" Press [^C] to exit.");
+                var exitEvent = new ManualResetEvent(false);
+
+                Console.CancelKeyPress += (sender, eventArgs) => {
+                                  eventArgs.Cancel = true;
+                                  exitEvent.Set();
+                              };
+                exitEvent.WaitOne();
             }
         }
     }
