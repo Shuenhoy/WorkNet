@@ -4,7 +4,7 @@
 ### FileProvider
 
 ```bash
-docker-compose  -f docker/docker-compose.FileProvider.env.yml -f docker/docker-compose.FileProvider.env.yml up -d
+docker-compose  -f docker/docker-compose.FileProvider.env.yml -f docker/docker-compose.FileProvider.yml up -d
 ```
 
 
