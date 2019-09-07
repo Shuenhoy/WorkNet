@@ -13,6 +13,7 @@ namespace WorkNet.Agent
         public static int CpuPeriod { get => Int32.Parse(Configuration["cpuPeriod"]); }
         public static int CpuQuota { get => Int32.Parse(Configuration["cpuQuota"]); }
         public static long Memory { get => Int64.Parse(Configuration["memory"]); }
+        public static string WorkDir { get => Configuration["workDir"]; }
         static AppConfigurationServices()
         {
             Configuration = new ConfigurationBuilder()

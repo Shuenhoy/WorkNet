@@ -31,7 +31,7 @@ namespace WorkNet.Agent.Worker
             docker = new DockerClientConfiguration(
                    new Uri("unix:///var/run/docker.sock"))
                .CreateClient();
-            workDir = Directory.GetCurrentDirectory();
+            workDir = AppConfigurationServices.WorkDir;
             server = AppConfigurationServices.Server;
             fileProvider = AppConfigurationServices.FileProvider;
         }
@@ -60,15 +60,15 @@ namespace WorkNet.Agent.Worker
             string containerId = null;
             Console.WriteLine(info.Executor);
             await PullFiles(info.Pulls, info.Executor);
-            Directory.CreateDirectory("data/out");
+            Directory.CreateDirectory($"data/out");
 
             try
             {
                 await docker.PullImage(info.Image);
                 containerId = await docker.CreateContainer(info.Image, new string[]{
-                    $"{workDir}/data/pulls:/app/wn_pulls",
-                    $"{workDir}/data/out:/app/wn_out",
-                    $"{workDir}/data/app:/app"
+                    $"{workDir}/pulls:/app/wn_pulls",
+                    $"{workDir}/out:/app/wn_out",
+                    $"{workDir}/app:/app"
 
                 });
                 {
