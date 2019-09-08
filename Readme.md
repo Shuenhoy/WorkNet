@@ -23,6 +23,22 @@ docker-compose  -f docker/docker-compose.Server.env.yml up -d
 docker-compose  -f docker/docker-compose.Server.yml up -d
 ```
 
+### Run Server and Fileprovider in the same machine
+
+* set up the environment
+
+```bash
+docker-compose  -f docker/docker-compose.ServerFileProvider.env.yml up -d
+```
+
+* login http://localhost:15672 with guest:guest
+* add user `server:server`
+
+``` bash
+docker-compose  -f docker/docker-compose.Server.yml up -d
+docker-compose  -f docker/docker-compose.FileProvider.yml up -d
+
+```
 
 ## Develop with Docker
 
