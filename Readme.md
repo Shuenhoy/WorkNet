@@ -40,6 +40,25 @@ docker-compose  -f docker/docker-compose.FileProvider.yml up -d
 
 ```
 
+### Deploy agents
+
+First, run the following commands:
+
+```bash
+docker swarm init
+```
+
+and a join command will be returned. 
+
+Then run the join command in the working nodes to let them join the cluster.
+
+In each working node, create path "/home/worknet/data".
+
+Last, run `docker stack deploy -c docker/docker-compose.Agent.yml worknet` to deploy the agents.
+
+(optional) you can install swarmpit to get a web gui manager of the cluster.
+
+
 ## Develop with Docker
 
 Setup the environment, then
