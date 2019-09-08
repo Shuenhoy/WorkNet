@@ -3,7 +3,10 @@ services:
   agent:
     image: 10.76.1.125:25000/worknet/agent
     deploy:
-      replicas: 1
+      mode: global
+      placement:
+        constraints:
+          - node.role != manager
     volumes:
       - /home/worknet/data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
