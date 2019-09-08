@@ -6,8 +6,7 @@
     <RootNamespace>WorkNet.Agent</RootNamespace>
     <LangVersion>8.0</LangVersion>
     <NullableReferenceTypes>true</NullableReferenceTypes>
-    <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
+    
   </PropertyGroup>
   <PropertyGroup>
     <TrimUnusedDependencies>true</TrimUnusedDependencies>

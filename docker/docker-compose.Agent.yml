@@ -1,0 +1,10 @@
+version: '3'
+services: 
+  agent:
+    image: 10.76.1.125:25000/worknet/agent
+    deploy:
+      replicas: 1
+    volumes:
+      - /home/worknet/data:/app/data
+      - /home/worknet/worknet_agent.json:/app/appsettings.json
+    
