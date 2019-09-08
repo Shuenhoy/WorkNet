@@ -6,5 +6,14 @@ services:
       replicas: 1
     volumes:
       - /home/worknet/data:/app/data
-      - /home/worknet/worknet_agent.json:/app/appsettings.json
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WN_AGENT_server=http://10.76.1.99:15001
+      - WN_AGENT_fileProvider=http://10.76.1.99:15000
+      - WN_AGENT_rabbitMQ=10.76.1.99
+      - WN_AGENT_workDir=/home/worknet/data
+      - WN_AGENT_timeout=1000
+      - WN_AGENT_cpuPeriod=100000
+      - WN_AGENT_cpuQuota=200000
+      - WN_AGENT_memory=268435456
     

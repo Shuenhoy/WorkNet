@@ -15,7 +15,7 @@ namespace WorkNet.Agent
         public static void Main()
         {
 
-            var factory = new ConnectionFactory() { HostName = "localhost", UserName = "server", Password = "server" };
+            var factory = new ConnectionFactory() { HostName = AppConfigurationServices.RabbitMQ, UserName = "server", Password = "server" };
             var worker = new DockerWorker();
 
             using (var connection = factory.CreateConnection())
