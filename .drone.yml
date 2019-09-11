@@ -1,3 +1,6 @@
+kind: pipeline
+name: default
+
 steps:
 - name: build_agent
   image: plugins/docker
