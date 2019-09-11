@@ -1,0 +1,11 @@
+steps:
+- name: build_agent
+  image: plugins/docker
+  settings:
+    dockerfile: docker/Agent.DockerFile
+    repo: 10.76.1.125:25000/worknet/agent
+    registry: 10.76.1.125:25000
+    insecure: true
+    tags: latest
+  when:
+    event: [tag]
