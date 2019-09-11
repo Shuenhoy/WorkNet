@@ -43,13 +43,11 @@ namespace WorkNet.Agent.Worker
         public async Task ExecTaskGroup(int id)
         {
             RemoveFiles();
-            Console.WriteLine($"{server}/api/tasks/@group/{id}");
             var info = await client
                 .GetAsync($"{server}/api/tasks/@group/{id}")
                 .Bind(x => x.Content.ReadAsStringAsync())
                 .Map(x =>
                 {
-                    Console.WriteLine(x);
                     return JsonSerializer.Deserialize<GroupInfo>(x, new JsonSerializerOptions()
                     {
                         PropertyNameCaseInsensitive = true
@@ -58,7 +56,6 @@ namespace WorkNet.Agent.Worker
                 );
 
             string containerId = null;
-            Console.WriteLine(info.Executor);
             await PullFiles(info.Pulls, info.Executor);
             Directory.CreateDirectory($"data/out");
 
