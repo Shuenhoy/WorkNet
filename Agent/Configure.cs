@@ -17,6 +17,7 @@ namespace WorkNet.Agent
         public static int CpuQuota { get => Int32.Parse(GetKey("cpuQuota")); }
         public static long Memory { get => Int64.Parse(GetKey("memory")); }
         public static string WorkDir { get => GetKey("workDir"); }
+        public static string RabbitMQPassword {get=>GetKey("rabbitMQPassword"); }
         static AppConfigurationServices()
         {
             Configuration = new ConfigurationBuilder()

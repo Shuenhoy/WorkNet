@@ -16,7 +16,7 @@ namespace WorkNet.Server.Services
         private IModel channel;
         public RabbitMQService(IServiceScopeFactory sf)
         {
-            var factory = new ConnectionFactory() { HostName = "rabbitmq", UserName = "server", Password="server" };;
+            var factory = new ConnectionFactory() { HostName = "rabbitmq", UserName = "server", Password=Environment.GetEnvironmentVariable("WN_AGENT_RabbitMQPassword") };;
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
 
