@@ -317,7 +317,7 @@ namespace WorkNet.Client.Commands
                     Console.WriteLine($"ERROR: Expect {arguments.Count} arguments, but got {rawArgs.Count}");
                     return -1;
                 }
-                else
+                else if(free)
                 {
                     arguments = Range(1, rawArgs.Count).Map(x => $"arg{x}").ToList();
 
