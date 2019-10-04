@@ -195,7 +195,6 @@ namespace WorkNet.Client.Commands
         static Seq<Seq<string>> GenerateArguments(List<Argument> arguments, int pos)
         {
 
-            Console.WriteLine($"{arguments}, {pos}");
             var arg = arguments[pos];
             if (pos == arguments.Count - 1)
             {
