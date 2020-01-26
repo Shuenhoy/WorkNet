@@ -6,19 +6,19 @@ namespace WorkNet.Agent
 {
     public class AppConfigurationServices
     {
-        private static string GetKey(string key)
-            => Environment.GetEnvironmentVariable("WN_AGENT_" + key) ?? Configuration[key];
+        private static string GetKey(string key, string defaultValue = null)
+            => Environment.GetEnvironmentVariable("WN_AGENT_" + key) ?? Configuration[key] ?? defaultValue;
         public static IConfiguration Configuration { get; set; }
-        public static string FileProvider { get => GetKey("fileProvider"); }
-        public static string RabbitMQ { get => GetKey("rabbitMQ"); }
-        public static string Server { get => GetKey("server"); }
-        public static int RabbitMQPort { get => Int32.Parse(GetKey("rabbitMQPort")); }
+
         public static int Timeout { get => Int32.Parse(GetKey("timeout")); }
         public static int CpuPeriod { get => Int32.Parse(GetKey("cpuPeriod")); }
         public static int CpuQuota { get => Int32.Parse(GetKey("cpuQuota")); }
         public static long Memory { get => Int64.Parse(GetKey("memory")); }
-        public static string WorkDir { get => GetKey("workDir"); }
-        public static string RabbitMQPassword { get => GetKey("rabbitMQPassword"); }
+        public static string WorkDir { get => GetKey("workDir", Directory.GetCurrentDirectory()); }
+        public static string RabbitMQ { get => GetKey("rabbitMQ", "localhost"); }
+        public static int RabbitMQPort { get => Int32.Parse(GetKey("rabbitMQPort", "5672")); }
+        public static string RabbitMQUsername { get => GetKey("rabbitMQUsername", "guest"); }
+        public static string RabbitMQPassword { get => GetKey("rabbitMQPassword", "guest"); }
         static AppConfigurationServices()
         {
             Configuration = new ConfigurationBuilder()

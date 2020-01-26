@@ -272,35 +272,9 @@ namespace WorkNet.Client.Commands
             }
             return (pattern, args, fileArgs);
         }
-        static HttpClient client = new HttpClient();
-        public static async Task<int> Upload(string name)
-        {
-            using var content = new MultipartFormDataContent();
-            using var stream = new FileStream(name, FileMode.Open, FileAccess.Read);
-            content.Add(new StringContent(JsonSerializer.Serialize(new { Namespace = "__worknet_upload" })), "payload");
-            content.Add(new StreamContent(stream), "files", Path.GetFileName(name));
-
-            var resp = await client.PostAsync($"{AppConfigurationServices.FileProvider}/api/file",
-            content);
-            var ret = await resp.Content.ReadAsStringAsync();
-            var file = JsonSerializer.Deserialize<FileEntry>(ret, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            return file.FileEntryID;
-        }
         static async Task<int> SubmitToServer(TaskSubmit submit)
         {
-            var content = JsonSerializer.Serialize(submit);
-            Console.WriteLine(content);
-            var resp = await client.PostAsync($"{AppConfigurationServices.Server}/api/tasks",
-                new StringContent(content, Encoding.UTF8, "application/json"));
-            var ret = await resp.Content.ReadAsStringAsync();
-            var userTask = JsonSerializer.Deserialize<UserTask>(ret, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            return userTask.UserTaskId;
+
         }
         static int SubmitFromConfig(TaskConfig content, bool rezip, bool free)
         {
@@ -317,7 +291,7 @@ namespace WorkNet.Client.Commands
                     Console.WriteLine($"ERROR: Expect {arguments.Count} arguments, but got {rawArgs.Count}");
                     return -1;
                 }
-                else if(free)
+                else if (free)
                 {
                     arguments = Range(1, rawArgs.Count).Map(x => $"arg{x}").ToList();
 

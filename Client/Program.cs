@@ -2,7 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using CommandLine;
-using WorkNet.Client.Commands;
+using WorkNet.Common.Models;
+using WorkNet.Common;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System.Threading;
+
 namespace WorkNet.Client
 {
     [Verb("add", HelpText = "Add several single tasks")]
@@ -50,15 +55,78 @@ namespace WorkNet.Client
 
         static int Main(string[] args)
         {
-            return CommandLine.Parser.Default.ParseArguments<AddOptions, SubmitOptions, InitOptions, PullOptions, RunOptions>(args)
-              .MapResult(
-                (InitOptions opts) => Executor.Init(opts),
-                (AddOptions opts) => Executor.Add(opts),
-                (SubmitOptions opts) => Executor.Submit(opts),
-                (PullOptions opts) => Executor.Pull(opts),
-                (RunOptions opts) => Executor.Run(opts),
+            var factory = new ConnectionFactory()
+            {
+                HostName = AppConfigurationServices.RabbitMQ,
+                Port = AppConfigurationServices.RabbitMQPort,
+                UserName = AppConfigurationServices.RabbitMQUsername,
+                Password = AppConfigurationServices.RabbitMQPassword
+            };
 
-            errs => 1);
+
+            using (var connection = factory.CreateConnection())
+            using (var channel = connection.CreateModel())
+            {
+                var xargs = new Dictionary<string, object>();
+                xargs.Add("x-message-ttl", 1000 * 60 * 60 * 24 * 3);
+                var rev = channel.QueueDeclare(durable: false, exclusive: false, autoDelete: false, arguments: xargs).QueueName;
+                channel.QueueDeclare(queue: "task_queue",
+                                     durable: true,
+                                     exclusive: false,
+                                     autoDelete: false,
+                                     arguments: null);
+                var properties = channel.CreateBasicProperties();
+                properties.Persistent = true;
+                channel.BasicPublish(exchange: "", routingKey: "task_queue", basicProperties: properties, body: new WorkNet.Common.Models.TaskGroup()
+                {
+
+                    subtasks = new List<AtomicTask>(new[] { new AtomicTask(){
+
+                    } }
+                    ),
+                    files = new List<(string, FileGetter)>(new (string, FileGetter)[] { }),
+                    executor = new Executor()
+                    {
+                        worker = null,
+                        source = @"
+                            local stdout, stderr, exitCode = docker_arr('alpine', {'sh','-c','echo hello'})
+                            return {stdout=stdout, stderr=stderr,exitCode=exitCode}
+                        "
+                    },
+                    parameters = new Dictionary<string, object>()
+                }.SerializeToByteArray());
+                var consumer = new EventingBasicConsumer(channel);
+                consumer.Received += (model, ea) =>
+                {
+                    var body = ea.Body.Deserialize<Dictionary<string, object>>();
+                    foreach (var (k, v) in body)
+                    {
+                        Console.WriteLine($"{k} = {v}");
+                    }
+                    channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                };
+                channel.BasicConsume(queue: rev, autoAck: false, consumer: consumer);
+                Console.WriteLine(" Press [^C] to exit.");
+                var exitEvent = new ManualResetEvent(false);
+
+                Console.CancelKeyPress += (sender, eventArgs) =>
+                {
+                    eventArgs.Cancel = true;
+                    exitEvent.Set();
+                };
+                exitEvent.WaitOne();
+            }
+
+            return 0;
+            // return CommandLine.Parser.Default.ParseArguments<AddOptions, SubmitOptions, InitOptions, PullOptions, RunOptions>(args)
+            //   .MapResult(
+            //     (InitOptions opts) => Executor.Init(opts),
+            //     (AddOptions opts) => Executor.Add(opts),
+            //     (SubmitOptions opts) => Executor.Submit(opts),
+            //     (PullOptions opts) => Executor.Pull(opts),
+            //     (RunOptions opts) => Executor.Run(opts),
+
+            // errs => 1);
         }
     }
 }

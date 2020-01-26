@@ -5,8 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WorkNet.Agent.Worker;
+using WorkNet.Common;
+using WorkNet.Common.Models;
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using Microsoft.Extensions.Logging;
 
 namespace WorkNet.Agent
 {
@@ -15,18 +18,22 @@ namespace WorkNet.Agent
         public static void Main()
         {
 
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var logger = loggerFactory.CreateLogger<Program>();
             var factory = new ConnectionFactory()
             {
                 HostName = AppConfigurationServices.RabbitMQ,
                 Port = AppConfigurationServices.RabbitMQPort,
-                UserName = "server",
+                UserName = AppConfigurationServices.RabbitMQUsername,
                 Password = AppConfigurationServices.RabbitMQPassword
             };
-            var worker = new DockerWorker();
+
 
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
+                var worker = new DockerWorker(channel, logger);
+
                 channel.QueueDeclare(queue: "task_queue",
                                      durable: true,
                                      exclusive: false,
@@ -35,37 +42,33 @@ namespace WorkNet.Agent
 
                 channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 
-                Console.WriteLine(" [*] Waiting for messages.");
-
+                logger.LogInformation("Waiting for tasks");
                 var consumer = new EventingBasicConsumer(channel);
                 consumer.Received += (model, ea) =>
                 {
-                    var body = ea.Body;
-                    var message = Encoding.UTF8.GetString(body);
-                    var id = Int32.Parse(message);
-                    Console.WriteLine(" [x] Received {0}", message);
+                    var body = ea.Body.Deserialize<TaskGroup>();
+
 
                     try
                     {
-                        worker.ExecTaskGroup(id).Wait();
-                        Console.WriteLine(" [x] Done");
-
+                        worker.ExecTaskGroup(body, ea).Wait();
                         channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                        logger.LogInformation("task finished");
+
                     }
                     catch (AggregateException ae)
                     {
                         var error = "";
                         foreach (var e in ae.InnerExceptions)
                         {
-                            Console.WriteLine(e);
-                            error += e.Message;
-                        }
-                        Console.WriteLine(" [x] Done");
-                        worker.SetError(id, error).Wait();
-                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 
-                        // channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, true);
+                            error += e.ToString();
+                        }
+                        logger.LogError("task failed.\n" + error);
+                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     }
+
+
 
 
 

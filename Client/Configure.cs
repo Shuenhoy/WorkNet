@@ -6,9 +6,15 @@ namespace WorkNet.Client
 {
     public class AppConfigurationServices
     {
+        private static string GetKey(string key, string defaultValue = null)
+            => Environment.GetEnvironmentVariable("WN_CLIENT_" + key) ?? Configuration[key] ?? defaultValue;
         public static IConfiguration Configuration { get; set; }
-        public static string FileProvider { get; set; }
-        public static string Server { get; set; }
+
+
+        public static string RabbitMQ { get => GetKey("rabbitMQ", "localhost"); }
+        public static int RabbitMQPort { get => Int32.Parse(GetKey("rabbitMQPort", "5672")); }
+        public static string RabbitMQUsername { get => GetKey("rabbitMQUsername", "guest"); }
+        public static string RabbitMQPassword { get => GetKey("rabbitMQPassword", "guest"); }
 
         static AppConfigurationServices()
         {
@@ -33,8 +39,6 @@ namespace WorkNet.Client
                 .SetBasePath(basePath)
                 .Add(new JsonConfigurationSource { Path = "worknet.json", ReloadOnChange = false })
                 .Build();
-            FileProvider = Configuration["fileProvider"];
-            Server = Configuration["server"];
         }
     }
 }

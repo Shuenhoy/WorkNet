@@ -3,177 +3,263 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using System.Collections;
 using LanguageExt;
 using SmartFormat;
 using WorkNet.Common.Models;
-
+using WorkNet.Common;
+using NLua;
 using System.Linq;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+
+using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 
 namespace WorkNet.Agent.Worker
 {
-
-    public class DockerWorker
+    public class LuaAgent
     {
         DockerClient docker;
-        HttpClient client;
-        string server;
-        string fileProvider;
+        Dictionary<string, string> containers;
         string workDir;
-        public DockerWorker()
+        ILogger logger;
+
+        public LuaAgent(DockerClient docker, string workDir, ILogger logger)
         {
-            client = new HttpClient();
-            docker = new DockerClientConfiguration(
-                   new Uri("unix:///var/run/docker.sock"))
-               .CreateClient();
-            workDir = AppConfigurationServices.WorkDir;
-            server = AppConfigurationServices.Server;
-            fileProvider = AppConfigurationServices.FileProvider;
+            this.docker = docker;
+            this.workDir = workDir;
+            this.logger = logger;
+            this.containers = new Dictionary<string, string>();
         }
 
-        public async Task SetError(int id, string message)
+        public FileGetter AddFile(string path)
         {
-            var resp = await client.PostAsync($"{server}/api/tasks/seterror/{id}", new StringContent(JsonSerializer.Serialize(message), Encoding.UTF8, "application/json"));
+            return new FileBytes(File.ReadAllBytes(path));
         }
-        public async Task ExecTaskGroup(int id)
+        internal void cleanup()
         {
-            RemoveFiles();
-            var info = await client
-                .GetAsync($"{server}/api/tasks/@group/{id}")
-                .Bind(x => x.Content.ReadAsStringAsync())
-                .Map(x =>
-                {
-                    return JsonSerializer.Deserialize<GroupInfo>(x, new JsonSerializerOptions()
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                );
-
-            string containerId = null;
-            await PullFiles(info.Pulls, info.Executor);
-            Directory.CreateDirectory($"data/out");
-
+            Task.WaitAll(containers.Values.Map(x => docker.RemoveContainer(x)).ToArray());
+            containers.Clear();
+        }
+        private string getContainer(string image)
+        {
             try
             {
-                await docker.PullImage(info.Image);
-                containerId = await docker.CreateContainer(info.Image, new string[]{
+                if (!containers.ContainsKey(image))
+                {
+                    docker.PullImage(image).Wait();
+                    var c = docker.CreateContainer(image, "/app", new string[]{
                     $"{workDir}/pulls:/app/wn_pulls",
                     $"{workDir}/out:/app/wn_out",
                     $"{workDir}/app:/app"
 
                 });
-                {
-                    await docker.RunCommandInContainerAsync(containerId,
-                            new[] { "sh", "init.sh" });
+                    c.Wait();
+                    logger.LogInformation($"container {c.Result}({image}) created.");
+                    containers[image] = c.Result;
                 }
-                int index = 0;
-                var results = new List<int>();
-                foreach (var parameter in info.Parameters)
-                {
-                    Directory.CreateDirectory("data/out");
-                    var command = Smart.Format(info.Execution, parameter.EnumerateObject().ToDictionary(x => x.Name, x => x.Value));
-                    var (stdout, stderr) = await docker.RunCommandInContainerAsync(containerId,
-                        new[] { "sh", "-c", command
-                    });
-                    Task.WaitAll(
-                        File.WriteAllTextAsync("data/out/wn_task.txt", command + "\n" + parameter.GetRawText()),
-                        File.WriteAllTextAsync("data/out/wn_stdout.txt", stdout),
-                        File.WriteAllTextAsync("data/out/wn_stderr.txt", stderr));
-                    // Submit Result
-                    results.Add(await Sumbit(info.Id, index));
-                    Directory.Delete("data/out", true);
-                    index++;
-                }
-                var respup = await client.PostAsync($"{server}/api/tasks/result/{info.Id}", new StringContent(JsonSerializer.Serialize(results), Encoding.UTF8, "application/json"));
-                respup.EnsureSuccessStatusCode();
+                return containers[image];
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw e;
+            }
+        }
+        public (string stdout, string stderr, long exitCode) Docker(string image, string command)
+        {
+            var container = getContainer(image);
+            logger.LogInformation($"execute in {container}({image}): {command}");
+            var tsk = docker.RunCommandInContainerAsync(container,
+                                        command);
+            tsk.Wait();
+            return tsk.Result;
+        }
+        public string Format(string format, Dictionary<string, object> arguments)
+        {
+            return Smart.Format(format, arguments);
+        }
+        public (string stdout, string stderr, long exitCode) Docker(string image, string[] commands)
+        {
+            var container = getContainer(image);
+            logger.LogInformation($"execute in {container}({image}): {String.Join(" ", commands)}");
+            var tsk = docker.RunCommandInContainerAsync(container,
+                                        commands);
+            tsk.Wait();
+            return tsk.Result;
+        }
+        public FileGetter AddPath(string path)
+        {
+            ZipFile.CreateFromDirectory(path, path + ".zip");
+            return new FileBytes(File.ReadAllBytes(path + ".zip"));
 
-            finally
+        }
+
+    }
+    public class DockerWorker
+    {
+
+
+        Lua state;
+        LuaAgent agent;
+        ILogger logger;
+        IModel channel;
+        string workDir;
+        DockerClient getDocker()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return new DockerClientConfiguration(
+                                   new Uri("npipe://./pipe/docker_engine"))
+                               .CreateClient();
+            else return new DockerClientConfiguration(
+                new Uri("unix:///var/run/docker.sock"))
+            .CreateClient();
+
+        }
+        public DockerWorker(IModel c, ILogger l)
+        {
+            logger = l;
+            workDir = AppConfigurationServices.WorkDir;
+            agent = new LuaAgent(getDocker(), workDir, logger);
+
+            state = new Lua();
+            state["agent"] = agent;
+            state.LoadCLRPackage();
+            state.DoString(@"
+                import 'System'
+                local a = agent
+                local unpack = table.unpack
+                local print = print
+                local String = String
+                local luanet = luanet
+                function file(...)
+                    return a:AddFile(unpack({...}))
+                end
+                function folder(...)
+                    return a:AddPath(unpack({...}))
+                end
+                function docker(...)
+                    local ret = a:Docker(unpack({...}))
+                    return ret.Item1, ret.Item2, ret.Item3
+                end
+                function docker_arr(image, arr)
+                    local ret = a:Docker(image, luanet.make_array(String, arr))
+                    return ret.Item1, ret.Item2, ret.Item3
+                end
+                function format(...)
+                    return a:Format(unpack({...}))
+                end
+                function run(untrusted_code, env)
+                    local untrusted_function, message = load(untrusted_code, nil, 't', env)
+                    if not untrusted_function then return nil, message end
+                    return pcall(untrusted_function)
+                end
+            ");
+
+            channel = c;
+        }
+
+        public async Task ExecTaskGroup(TaskGroup task, BasicDeliverEventArgs ea)
+        {
+
+
+            try
             {
 
+                RemoveFiles();
+                logger.LogInformation($"task from {ea.BasicProperties.ReplyTo}");
+
+                CreateDirectories();
+                await WriteFiles(task.files, task.executor.worker);
+
+                state["global"] = task.parameters;
+                foreach (var subtask in task.subtasks)
+                {
+                    state["task"] = subtask.parameters;
+                    state["source"] = task.executor.source;
+                    logger.LogInformation(task.executor.source);
+                    Directory.CreateDirectory($"{workDir}/out");
+
+                    var raw = state.DoString(
+                        @"return run(source, {global = global, 
+                                        task = task, file = file, folder = folder, docker_arr = docker_arr,
+                                        docker = docker, format = format})");
+                    if ((bool)(raw[0]) == false)
+                    {
+                        logger.LogError(raw[1].ToString());
+                        throw new Exception("Lua Exception:\n" + (string)raw[1]);
+                    }
+                    var ret = state.GetTableDict((LuaTable)raw[1]).ToDictionary(x => x.Key.ToString(), x => x.Value);
+                    foreach (var (k, v) in ret)
+                    {
+                        Console.WriteLine($"{k} = {v}");
+                    }
+                    Directory.Delete($"{workDir}/out", true);
+                    var properties = channel.CreateBasicProperties();
+                    properties.Persistent = true;
+                    properties.Type = "result";
+
+                    channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
+                     body: new TaskResult() { payload = ret, id = subtask.id }.SerializeToByteArray());
+                }
+
+            }
+            catch (AggregateException ae)
+            {
+                var error = "";
+                foreach (var e in ae.InnerExceptions)
+                {
+                    error += e.ToString();
+                }
+                logger.LogError("task failed.\n" + error);
+                channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+            }
+            finally
+            {
                 try
                 {
-                    if (containerId != null)
-                        await docker.RemoveContainer(containerId);
+                    agent.cleanup();
                 }
                 finally
                 {
                     RemoveFiles();
                 }
-
             }
-        }
-        async Task<int> Sumbit(long groupId, int singleId)
-        {
 
-            File.Delete($"data/results/result_{groupId}_{singleId}.zip");
-            ZipFile.CreateFromDirectory("data/out", $"data/results/result_{groupId}_{singleId}.zip");
-            using var content = new MultipartFormDataContent();
-            using var stream = new FileStream($"data/results/result_{groupId}_{singleId}.zip", FileMode.Open, FileAccess.Read);
-            content.Add(new StringContent(JsonSerializer.Serialize(new { Namespace = "__worknet_result" })), "payload");
-            content.Add(new StreamContent(stream), "files", $"result_{groupId}_{singleId}.zip");
 
-            var resp = await client.PostAsync($"{fileProvider}/api/file", content);
-            var ret = await resp.Content.ReadAsStringAsync();
-            var file = JsonSerializer.Deserialize<FileEntry>(ret, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            return file.FileEntryID;
         }
         void RemoveFiles()
         {
             try
             {
-                Directory.Delete("data/pulls", true);
-                Directory.Delete("data/app", true);
-                Directory.Delete("data/results", true);
+                Directory.Delete($"{workDir}/pulls", true);
+                Directory.Delete($"{workDir}/app", true);
+                Directory.Delete($"{workDir}/results", true);
             }
             catch (Exception) { }
 
         }
-        async Task PullFiles(List<int> pulls, int? executor)
+        void CreateDirectories()
         {
-            Directory.CreateDirectory("data/pulls");
-            Directory.CreateDirectory("data/results");
-            Directory.CreateDirectory("data/app");
-
-
-            if (executor.HasValue)
+            Directory.CreateDirectory($"{workDir}/pulls");
+            Directory.CreateDirectory($"{workDir}/results");
+            Directory.CreateDirectory($"{workDir}/app");
+        }
+        async Task WriteFiles(List<(string fileName, FileGetter file)> files, FileGetter executor)
+        {
+            if (executor != null)
             {
-                int exec = executor.Value;
-                var resp2 = await client.GetAsync($"{fileProvider}/api/file/@id/{exec}");
-                var stream = await resp2.Content.ReadAsStreamAsync();
-                var s = new FileStream("data/pulls/__wn_executor.tar", FileMode.Create, FileAccess.Write);
-                await stream.CopyToAsync(s);
-                s.Close();
-                ZipFile.ExtractToDirectory("./data/pulls/__wn_executor.tar", "./data/app");
+                await executor.WriteTo("./data/pulls/_wn_exexecutor.zip");
+                ZipFile.ExtractToDirectory("./data/pulls/__wn_executor.zip", "./data/app");
             }
-
             try
             {
-                Task.WaitAll(pulls
-                    .Map(async pull =>
+                Task.WaitAll(files
+                    .Map(file =>
                     {
-                        var resp = await client.GetAsync($"{fileProvider}/api/file/@idhead/{pull}");
-
-
-                        var src = await resp.Content.ReadAsStringAsync();
-                        var fileInfo = JsonSerializer.Deserialize<FileEntry>(src, new JsonSerializerOptions()
-                        {
-                            PropertyNameCaseInsensitive = true
-                        });
-                        var resp2 = await client.GetAsync($"{fileProvider}/api/file/@id/{fileInfo.FileEntryID}");
-                        var stream = await resp2.Content.ReadAsStreamAsync();
-                        using var s = new FileStream($"data/pulls/{fileInfo.FileName}", FileMode.Create, FileAccess.Write);
-                        await stream.CopyToAsync(s);
-
+                        return file.file.WriteTo($"data/pulls/{file.fileName}");
                     }).ToArray());
             }
             catch (Exception err)

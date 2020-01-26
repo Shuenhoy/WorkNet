@@ -3,6 +3,8 @@ using Docker.DotNet.Models;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace WorkNet.Agent.Worker
 {
@@ -51,7 +53,7 @@ namespace WorkNet.Agent.Worker
             await client.Containers.RemoveContainerAsync(id, new ContainerRemoveParameters() { Force = true });
         }
         public static async Task<string> CreateContainer(
-            this DockerClient client, string image, string[] binds = null)
+            this DockerClient client, string image, string workDir, string[] binds = null)
         {
             var ret = await client.Containers.CreateContainerAsync(new CreateContainerParameters()
             {
@@ -60,7 +62,7 @@ namespace WorkNet.Agent.Worker
                 AttachStderr = true,
                 AttachStdout = true,
                 OpenStdin = true,
-                WorkingDir = "/app",
+                WorkingDir = workDir,
                 HostConfig = new HostConfig()
                 {
                     Binds = binds,
@@ -89,7 +91,7 @@ namespace WorkNet.Agent.Worker
         {
             await client.Containers.WaitContainerAsync(ID);
         }
-        public static async Task<(string stdout, string stderr)> RunCommandInContainerAsync(this DockerClient client, string containerId, string[] commandTokens)
+        public static async Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(this DockerClient client, string containerId, string[] commandTokens)
         {
             //await client.Containers.StartAndAttachContainerExecAsync()
             var createdExec = await client.Containers.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
@@ -99,9 +101,8 @@ namespace WorkNet.Agent.Worker
 
                 Cmd = commandTokens
             });
-
-
             var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;
+            var insp = await client.Containers.InspectContainerExecAsync(createdExec.ID);
 
             var task = multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
             if (await Task.WhenAny(task, Task.Delay(AppConfigurationServices.Timeout)) != task)
@@ -110,12 +111,55 @@ namespace WorkNet.Agent.Worker
                 throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
 
             }
-            return task.Result;
+            return (task.Result.stdout, task.Result.stderr, insp.ExitCode);
         }
-        public static Task<(string stdout, string stderr)> RunCommandInContainerAsync(this DockerClient client, string containerId, string command)
+        public static IEnumerable<string> Split(this string str,
+                                            Func<char, bool> controller)
         {
-            var commandTokens = command.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-            return RunCommandInContainerAsync(client, containerId, commandTokens);
+            int nextPiece = 0;
+
+            for (int c = 0; c < str.Length; c++)
+            {
+                if (controller(str[c]))
+                {
+                    yield return str.Substring(nextPiece, c - nextPiece);
+                    nextPiece = c + 1;
+                }
+            }
+
+            yield return str.Substring(nextPiece);
+        }
+        public static string TrimMatchingQuotes(this string input, char quote)
+        {
+            if ((input.Length >= 2) &&
+                (input[0] == quote) && (input[input.Length - 1] == quote))
+                return input.Substring(1, input.Length - 2);
+
+            return input;
+        }
+        public static IEnumerable<string> SplitCommandLine(string commandLine)
+        {
+            bool inQuotes = false;
+            bool isEscaping = false;
+
+            return commandLine.Split(c =>
+            {
+                if (c == '\\' && !isEscaping) { isEscaping = true; return false; }
+
+                if (c == '\"' && !isEscaping)
+                    inQuotes = !inQuotes;
+
+                isEscaping = false;
+
+                return !inQuotes && Char.IsWhiteSpace(c)/*c == ' '*/;
+            })
+                .Select(arg => arg.Trim().TrimMatchingQuotes('\"').Replace("\\\"", "\""))
+                .Where(arg => !string.IsNullOrEmpty(arg));
+        }
+        public static Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(this DockerClient client, string containerId, string command)
+        {
+            var commandTokens = SplitCommandLine(command);
+            return RunCommandInContainerAsync(client, containerId, commandTokens.ToArray());
         }
     }
 }
