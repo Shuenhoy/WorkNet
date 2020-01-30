@@ -10,7 +10,7 @@ namespace WorkNet.Common.Models
     public class AtomicTask
     {
         public long id;
-        public IDictionary<string, object> parameters;
+        public IDictionary<object, string> parameters;
 
     }
 
@@ -21,10 +21,11 @@ namespace WorkNet.Common.Models
         public string source;
     }
 
+
+
     [MessagePackObject(keyAsPropertyName: true)]
     public class AtomicTaskResult
     {
-        public long groupId;
         public long atomicId;
         public Dictionary<string, object> ret;
     }
@@ -33,9 +34,9 @@ namespace WorkNet.Common.Models
     public class TaskGroup
     {
         public List<AtomicTask> subtasks;
-        public List<(string fileName, FileGetter file)> files;
+        public List<ValueTuple<string, FileGetter>> files;
         public Executor executor;
-        public IDictionary<string, object> parameters;
+        public IDictionary<string, string> parameters;
 
     }
 }

@@ -9,10 +9,11 @@ using LanguageExt;
 using SmartFormat;
 using WorkNet.Common.Models;
 using WorkNet.Common;
-using NLua;
+using MoonSharp.Interpreter;
 using System.Linq;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Text;
 
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
@@ -34,9 +35,13 @@ namespace WorkNet.Agent.Worker
             this.containers = new Dictionary<string, string>();
         }
 
-        public FileGetter AddFile(string path)
+        public FilePair AddFile(string path)
         {
-            return new FileBytes(File.ReadAllBytes(path));
+            return new FilePair()
+            {
+                filename = path,
+                file = new FileBytes(File.ReadAllBytes($"{workDir}/data/out/{path}"))
+            };
         }
         internal void cleanup()
         {
@@ -51,11 +56,10 @@ namespace WorkNet.Agent.Worker
                 {
                     docker.PullImage(image).Wait();
                     var c = docker.CreateContainer(image, "/app", new string[]{
-                    $"{workDir}/pulls:/app/wn_pulls",
-                    $"{workDir}/out:/app/wn_out",
-                    $"{workDir}/app:/app"
-
-                });
+                        $"{workDir}/data/pulls:/app/wn_pulls",
+                        $"{workDir}/data/out:/app/wn_out",
+                        $"{workDir}/data/app:/app"
+                    });
                     c.Wait();
                     logger.LogInformation($"container {c.Result}({image}) created.");
                     containers[image] = c.Result;
@@ -68,32 +72,47 @@ namespace WorkNet.Agent.Worker
                 throw e;
             }
         }
-        public (string stdout, string stderr, long exitCode) Docker(string image, string command)
+        public long Docker(string image, string command, out string stdout, out string stderr)
         {
             var container = getContainer(image);
             logger.LogInformation($"execute in {container}({image}): {command}");
             var tsk = docker.RunCommandInContainerAsync(container,
                                         command);
             tsk.Wait();
-            return tsk.Result;
+            stdout = tsk.Result.stdout;
+            stderr = tsk.Result.stderr;
+            return tsk.Result.exitCode;
         }
         public string Format(string format, Dictionary<string, object> arguments)
         {
             return Smart.Format(format, arguments);
         }
-        public (string stdout, string stderr, long exitCode) Docker(string image, string[] commands)
+        public long DockerArr(string image, string[] commands, out string stdout, out string stderr)
         {
             var container = getContainer(image);
             logger.LogInformation($"execute in {container}({image}): {String.Join(" ", commands)}");
             var tsk = docker.RunCommandInContainerAsync(container,
                                         commands);
             tsk.Wait();
-            return tsk.Result;
+
+            stdout = tsk.Result.stdout;
+            stderr = tsk.Result.stderr;
+            logger.LogInformation(stdout);
+            return tsk.Result.exitCode;
         }
-        public FileGetter AddPath(string path)
+        public FilePair AddPath(string path)
         {
-            ZipFile.CreateFromDirectory(path, path + ".zip");
-            return new FileBytes(File.ReadAllBytes(path + ".zip"));
+            var self = $"{workDir}/data/out/wn_prefix_{path}_wn.zip";
+            ZipHelper.CreateFromDirectory(
+                $"{workDir}/data/out/{path}",
+                 $"{workDir}/data/out/wn_prefix_{path}_wn.zip", CompressionLevel.Fastest, false, Encoding.UTF8,
+                    path => path != self);
+            var ret = new FilePair()
+            {
+                filename = path + ".zip",
+                file = new FileBytes(File.ReadAllBytes($"{workDir}/data/out/wn_prefix_{path}_wn.zip"), true)
+            };
+            return ret;
 
         }
 
@@ -102,7 +121,7 @@ namespace WorkNet.Agent.Worker
     {
 
 
-        Lua state;
+        Script state;
         LuaAgent agent;
         ILogger logger;
         IModel channel;
@@ -123,17 +142,16 @@ namespace WorkNet.Agent.Worker
             logger = l;
             workDir = AppConfigurationServices.WorkDir;
             agent = new LuaAgent(getDocker(), workDir, logger);
+            UserData.RegisterType<LuaAgent>();
+            UserData.RegisterType<FilePair>();
+            state = new Script();
 
-            state = new Lua();
-            state["agent"] = agent;
-            state.LoadCLRPackage();
+            state.Globals["agent"] = agent;
             state.DoString(@"
-                import 'System'
                 local a = agent
                 local unpack = table.unpack
                 local print = print
                 local String = String
-                local luanet = luanet
                 function file(...)
                     return a:AddFile(unpack({...}))
                 end
@@ -141,12 +159,10 @@ namespace WorkNet.Agent.Worker
                     return a:AddPath(unpack({...}))
                 end
                 function docker(...)
-                    local ret = a:Docker(unpack({...}))
-                    return ret.Item1, ret.Item2, ret.Item3
+                    return a:Docker(unpack({...}))
                 end
-                function docker_arr(image, arr)
-                    local ret = a:Docker(image, luanet.make_array(String, arr))
-                    return ret.Item1, ret.Item2, ret.Item3
+                function docker_arr(...)
+                    return a:DockerArr(unpack({...}))
                 end
                 function format(...)
                     return a:Format(unpack({...}))
@@ -159,6 +175,19 @@ namespace WorkNet.Agent.Worker
             ");
 
             channel = c;
+        }
+        object ToObj(DynValue obj)
+        {
+            return obj.Type switch
+            {
+                DataType.Boolean => obj.Boolean,
+                DataType.String => obj.String,
+                DataType.Number => obj.Number,
+                DataType.UserData => obj.UserData.Object,
+                DataType.Nil => null,
+                DataType.Table => obj.Table.Pairs.ToDictionary(kv => ToObj(kv.Key), kv => ToObj(kv.Value)),
+                _ => throw new NotImplementedException()
+            };
         }
 
         public async Task ExecTaskGroup(TaskGroup task, BasicDeliverEventArgs ea)
@@ -174,35 +203,46 @@ namespace WorkNet.Agent.Worker
                 CreateDirectories();
                 await WriteFiles(task.files, task.executor.worker);
 
-                state["global"] = task.parameters;
+                state.Globals["global"] = task.parameters;
+                state.Globals["init"] = true;
                 foreach (var subtask in task.subtasks)
                 {
-                    state["task"] = subtask.parameters;
-                    state["source"] = task.executor.source;
-                    logger.LogInformation(task.executor.source);
-                    Directory.CreateDirectory($"{workDir}/out");
+                    state.Globals["task"] = subtask.parameters;
+                    state.Globals["source"] = task.executor.source;
+                    Directory.CreateDirectory($"{workDir}/data/out");
 
                     var raw = state.DoString(
                         @"return run(source, {global = global, 
                                         task = task, file = file, folder = folder, docker_arr = docker_arr,
-                                        docker = docker, format = format})");
-                    if ((bool)(raw[0]) == false)
+                                        docker = docker, format = format, init = init})");
+                    if (raw.Tuple[0].Boolean == false)
                     {
-                        logger.LogError(raw[1].ToString());
-                        throw new Exception("Lua Exception:\n" + (string)raw[1]);
+                        logger.LogError(raw.Tuple[1].String);
+                        throw new Exception("Lua Exception:\n" + raw.Tuple[1].String);
                     }
-                    var ret = state.GetTableDict((LuaTable)raw[1]).ToDictionary(x => x.Key.ToString(), x => x.Value);
-                    foreach (var (k, v) in ret)
-                    {
-                        Console.WriteLine($"{k} = {v}");
-                    }
-                    Directory.Delete($"{workDir}/out", true);
+                    var ret = ((Dictionary<object, object>)ToObj(raw.Tuple[1]))
+                        .ToDictionary(kv => kv.Key as string, kv =>
+                            kv.Value switch
+                            {
+                                FilePair fp => fp as PayloadItem,
+                                _ => new ObjectPayload() { obj = kv.Value } as PayloadItem
+                            });
+
+                    string a, b;
+                    agent.DockerArr("alpine", new[] { "sh", "-c", "rm -rf wn_out/*" }, out a, out b);
+
+
                     var properties = channel.CreateBasicProperties();
                     properties.Persistent = true;
                     properties.Type = "result";
+                    properties.MessageId = subtask.id.ToString();
+                    properties.CorrelationId = ea.BasicProperties.CorrelationId;
 
                     channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
                      body: new TaskResult() { payload = ret, id = subtask.id }.SerializeToByteArray());
+                    state.Globals["init"] = false;
+                    logger.LogInformation("subtask done");
+
                 }
 
             }
@@ -234,32 +274,32 @@ namespace WorkNet.Agent.Worker
         {
             try
             {
-                Directory.Delete($"{workDir}/pulls", true);
-                Directory.Delete($"{workDir}/app", true);
-                Directory.Delete($"{workDir}/results", true);
+                Directory.Delete($"{workDir}/data/pulls", true);
+                Directory.Delete($"{workDir}/data/app", true);
+                Directory.Delete($"{workDir}/data/out", true);
             }
             catch (Exception) { }
 
         }
         void CreateDirectories()
         {
-            Directory.CreateDirectory($"{workDir}/pulls");
-            Directory.CreateDirectory($"{workDir}/results");
-            Directory.CreateDirectory($"{workDir}/app");
+            Directory.CreateDirectory($"{workDir}/data/pulls");
+            Directory.CreateDirectory($"{workDir}/data/out");
+            Directory.CreateDirectory($"{workDir}/data/app");
         }
         async Task WriteFiles(List<(string fileName, FileGetter file)> files, FileGetter executor)
         {
             if (executor != null)
             {
-                await executor.WriteTo("./data/pulls/_wn_exexecutor.zip");
-                ZipFile.ExtractToDirectory("./data/pulls/__wn_executor.zip", "./data/app");
+                await executor.WriteTo($"{workDir}/data/pulls/__wn_executor.zip");
+                ZipFile.ExtractToDirectory($"{workDir}/data/pulls/__wn_executor.zip", "./data/app");
             }
             try
             {
                 Task.WaitAll(files
                     .Map(file =>
                     {
-                        return file.file.WriteTo($"data/pulls/{file.fileName}");
+                        return file.file.WriteTo($"{workDir}/data/pulls/{file.fileName}");
                     }).ToArray());
             }
             catch (Exception err)

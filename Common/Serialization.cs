@@ -15,10 +15,17 @@ namespace WorkNet.Common
                 return null;
             }
             var bin = MessagePackSerializer.Serialize(obj);
-            Console.WriteLine(MessagePackSerializer.ConvertToJson(bin));
             return bin;
         }
-
+        public static string SerializeToJson(this object obj)
+        {
+            if (obj == null)
+            {
+                return null;
+            }
+            var bin = MessagePackSerializer.SerializeToJson(obj);
+            return bin;
+        }
         public static T Deserialize<T>(this byte[] byteArray) where T : class
         {
             if (byteArray == null)

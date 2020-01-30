@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.IO;
 using MessagePack;
+using System.IO.Compression;
 
 namespace WorkNet.Common.Models
 {
@@ -14,16 +15,28 @@ namespace WorkNet.Common.Models
     [MessagePackObject(keyAsPropertyName: true)]
     public class FileBytes : FileGetter
     {
-        byte[] bytes;
-        public readonly bool zippedFolder;
+        public byte[] bytes;
+        public bool zippedFolder;
+        [SerializationConstructor]
+        public FileBytes()
+        {
+
+        }
         public FileBytes(byte[] b, bool zf = false)
         {
             bytes = b;
             zippedFolder = zf;
         }
-        public Task WriteTo(string filename)
+        public async Task WriteTo(string filename)
         {
-            return File.WriteAllBytesAsync(filename, bytes);
+            Directory.CreateDirectory(Path.GetDirectoryName(filename));
+            await File.WriteAllBytesAsync(filename, bytes);
+
+            if (zippedFolder)
+            {
+                ZipFile.ExtractToDirectory(filename, Path.GetDirectoryName(filename) + Path.GetFileNameWithoutExtension(filename));
+                File.Delete(filename);
+            }
         }
     }
 }
