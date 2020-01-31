@@ -1,1 +1,6 @@
-{}
+{
+    "rabbitMQ": "localhost",
+    "rabbitMQPort": 5672,
+    "rabbitMQUsername": "guest",
+    "rabbitMQPassword": "guest"
+}

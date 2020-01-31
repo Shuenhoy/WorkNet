@@ -5,8 +5,6 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkNet-Agent", "Agent\WorkNet-Agent.csproj", "{A4874265-C261-4FEB-87BD-A5C4D0C3DC37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkNet-FileProvider", "FileProvider\WorkNet-FileProvider.csproj", "{546ACAA5-3D00-42E4-B3FE-BF34750B9E5F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkNet.Client", "Client\WorkNet.Client.csproj", "{747B6188-7774-42E2-AA86-661E28C6E033}"
 EndProject
 Global
