@@ -1,71 +1,19 @@
 # WorkNet
 
-## Deploy with Docker
-### FileProvider
+## Deploy
 
-```bash
-docker-compose  -f docker/docker-compose.FileProvider.env.yml -f docker/docker-compose.FileProvider.yml up -d
-```
+We have removed the server and fileprovider. We only need to depoly a rabbitmq broker.
 
 
-### Server
+## Deploy agents
 
-* set up the environment
+Just run the program with proper config about the rabbitmq broker's information
 
-```bash
-docker-compose  -f docker/docker-compose.Server.env.yml up -d
-```
+## Client
 
-* login http://localhost:15672 with guest:guest
-* add user
-
-``` bash
-docker-compose  -f docker/docker-compose.Server.yml up -d
-```
-
-### Run Server and Fileprovider in the same machine
-
-* set up the environment
-
-```bash
-docker-compose  -f docker/docker-compose.ServerFileProvider.env.yml up -d
-```
-
-* login http://localhost:15672 with guest:guest
-* add user `server:server`
-
-``` bash
-docker-compose  -f docker/docker-compose.Server.yml up -d
-docker-compose  -f docker/docker-compose.FileProvider.yml up -d
-
-```
-
-### Deploy agents
-
-First, run the following commands:
-
-```bash
-docker swarm init
-```
-
-and a join command will be returned. 
-
-Then run the join command in the working nodes to let them join the cluster.
-
-In each working node, create path "/home/worknet/data".
-
-Last, run `docker stack deploy -c docker/docker-compose.Agent.yml worknet` to deploy the agents.
-
-(optional) you can install swarmpit to get a web gui manager of the cluster.
-
-
-## Develop with Docker
-
-Setup the environment, then
-
-```bash
-docker-compose run -p xx:5000 docker/docker-compose.dev.yml web bash
-```
+1. write a `wn_executor.lua`
+2. wn run ./your program
+3. wn pull id
 
 ## Publish Excutable For Agent and Client
 
