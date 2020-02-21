@@ -258,7 +258,7 @@ namespace WorkNet.Agent.Worker
                         }
                         var properties = channel.CreateBasicProperties();
                         properties.Persistent = true;
-                        properties.Type = "fail";
+                        properties.Type = "failed";
                         properties.MessageId = subtask.id.ToString();
                         properties.CorrelationId = ea.BasicProperties.CorrelationId;
 
