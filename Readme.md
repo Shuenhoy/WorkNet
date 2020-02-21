@@ -1,13 +1,13 @@
 # WorkNet
 
-## Deploy
+## Deploy Message Queue with docker
+`docker-compose -f docker/docker-compose.Rabbitmq.yml up -d`
 
-We have removed the server and fileprovider. We only need to depoly a rabbitmq broker. You can use `docker/docker-compose.Rabbitmq.yml`
 
-
-## Deploy agents
-
-copy `Agent/appsettings.json` to a folder, and modify the config, then run `wn-agent` in that folder.
+## Deploy agents with docker
+1. create `/home/worknode`
+2. copy `./Agent/appsettings.json` to `/home/worknode` and modify it
+3. `docker-compose -f docker/docker-compose.Agent.yml up -d`
 
 ## Client
 

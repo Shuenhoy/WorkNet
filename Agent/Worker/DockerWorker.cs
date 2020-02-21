@@ -40,7 +40,7 @@ namespace WorkNet.Agent.Worker
             return new FilePair()
             {
                 filename = path,
-                file = new FileBytes(File.ReadAllBytes($"{workDir}/data/out/{path}"))
+                file = new FileBytes(File.ReadAllBytes($"data/out/{path}"))
             };
         }
         internal void cleanup()
@@ -102,15 +102,15 @@ namespace WorkNet.Agent.Worker
         }
         public FilePair AddPath(string path)
         {
-            var self = $"{workDir}/data/out/wn_prefix_{path}_wn.zip";
+            var self = $"data/out/wn_prefix_{path}_wn.zip";
             ZipHelper.CreateFromDirectory(
-                $"{workDir}/data/out/{path}",
-                 $"{workDir}/data/out/wn_prefix_{path}_wn.zip", CompressionLevel.Fastest, false, Encoding.UTF8,
+                $"data/out/{path}",
+                 $"data/out/wn_prefix_{path}_wn.zip", CompressionLevel.Fastest, false, Encoding.UTF8,
                     path => path != self);
             var ret = new FilePair()
             {
                 filename = path + ".zip",
-                file = new FileBytes(File.ReadAllBytes($"{workDir}/data/out/wn_prefix_{path}_wn.zip"), true)
+                file = new FileBytes(File.ReadAllBytes($"data/out/wn_prefix_{path}_wn.zip"), true)
             };
             return ret;
 
@@ -211,7 +211,7 @@ namespace WorkNet.Agent.Worker
                     {
                         state.Globals["task"] = subtask.parameters;
                         state.Globals["source"] = task.executor.source;
-                        Directory.CreateDirectory($"{workDir}/data/out");
+                        Directory.CreateDirectory($"data/out");
 
                         var raw = state.DoString(
                             @"return run(source, {global = global, 
@@ -299,32 +299,32 @@ namespace WorkNet.Agent.Worker
         {
             try
             {
-                Directory.Delete($"{workDir}/data/pulls", true);
-                Directory.Delete($"{workDir}/data/app", true);
-                Directory.Delete($"{workDir}/data/out", true);
+                Directory.Delete($"data/pulls", true);
+                Directory.Delete($"data/app", true);
+                Directory.Delete($"data/out", true);
             }
             catch (Exception) { }
 
         }
         void CreateDirectories()
         {
-            Directory.CreateDirectory($"{workDir}/data/pulls");
-            Directory.CreateDirectory($"{workDir}/data/out");
-            Directory.CreateDirectory($"{workDir}/data/app");
+            Directory.CreateDirectory($"data/pulls");
+            Directory.CreateDirectory($"data/out");
+            Directory.CreateDirectory($"data/app");
         }
         async Task WriteFiles(List<(string fileName, FileGetter file)> files, FileGetter executor)
         {
             if (executor != null)
             {
-                await executor.WriteTo($"{workDir}/data/pulls/__wn_executor.zip");
-                ZipFile.ExtractToDirectory($"{workDir}/data/pulls/__wn_executor.zip", "./data/app");
+                await executor.WriteTo($"data/pulls/__wn_executor.zip");
+                ZipFile.ExtractToDirectory($"data/pulls/__wn_executor.zip", "./data/app");
             }
             try
             {
                 Task.WaitAll(files
                     .Map(file =>
                     {
-                        return file.file.WriteTo($"{workDir}/data/pulls/{file.fileName}");
+                        return file.file.WriteTo($"data/pulls/{file.fileName}");
                     }).ToArray());
             }
             catch (Exception err)
