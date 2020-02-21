@@ -249,13 +249,9 @@ namespace WorkNet.Agent.Worker
                         state.Globals["init"] = false;
                         logger.LogInformation("subtask done");
                     }
-                    catch (AggregateException ae)
+                    catch (Exception ae)
                     {
-                        var error = "";
-                        foreach (var e in ae.InnerExceptions)
-                        {
-                            error += e.ToString();
-                        }
+                        var error = ae.Message;
                         var properties = channel.CreateBasicProperties();
                         properties.Persistent = true;
                         properties.Type = "failed";
