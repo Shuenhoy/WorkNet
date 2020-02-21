@@ -207,41 +207,70 @@ namespace WorkNet.Agent.Worker
                 state.Globals["init"] = true;
                 foreach (var subtask in task.subtasks)
                 {
-                    state.Globals["task"] = subtask.parameters;
-                    state.Globals["source"] = task.executor.source;
-                    Directory.CreateDirectory($"{workDir}/data/out");
+                    try
+                    {
+                        state.Globals["task"] = subtask.parameters;
+                        state.Globals["source"] = task.executor.source;
+                        Directory.CreateDirectory($"{workDir}/data/out");
 
-                    var raw = state.DoString(
-                        @"return run(source, {global = global, 
+                        var raw = state.DoString(
+                            @"return run(source, {global = global, 
                                         task = task, file = file, folder = folder, docker_arr = docker_arr,
                                         docker = docker, format = format, init = init})");
-                    if (raw.Tuple[0].Boolean == false)
-                    {
-                        logger.LogError(raw.Tuple[1].String);
-                        throw new Exception("Lua Exception:\n" + raw.Tuple[1].String);
+                        if (raw.Tuple[0].Boolean == false)
+                        {
+                            logger.LogError(raw.Tuple[1].String);
+                            throw new Exception("Lua Exception:\n" + raw.Tuple[1].String);
+                        }
+                        var ret = ((Dictionary<object, object>)ToObj(raw.Tuple[1]))
+                            .ToDictionary(kv => kv.Key as string, kv =>
+                                kv.Value switch
+                                {
+                                    FilePair fp => fp as PayloadItem,
+                                    _ => new ObjectPayload() { obj = kv.Value } as PayloadItem
+                                });
+
+                        string a, b;
+                        agent.DockerArr("alpine", new[] { "sh", "-c", "rm -rf wn_out/*" }, out a, out b);
+                        var status = raw.Tuple[2].CastToString();
+                        if (status != "failed" && status != "invalid")
+                        {
+                            status = "result";
+                        }
+
+                        var properties = channel.CreateBasicProperties();
+                        properties.Persistent = true;
+                        properties.Type = status;
+                        properties.MessageId = subtask.id.ToString();
+                        properties.CorrelationId = ea.BasicProperties.CorrelationId;
+
+                        channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
+                         body: new TaskResult() { payload = ret, id = subtask.id }.SerializeToByteArray());
+                        state.Globals["init"] = false;
+                        logger.LogInformation("subtask done");
                     }
-                    var ret = ((Dictionary<object, object>)ToObj(raw.Tuple[1]))
-                        .ToDictionary(kv => kv.Key as string, kv =>
-                            kv.Value switch
-                            {
-                                FilePair fp => fp as PayloadItem,
-                                _ => new ObjectPayload() { obj = kv.Value } as PayloadItem
-                            });
+                    catch (AggregateException ae)
+                    {
+                        var error = "";
+                        foreach (var e in ae.InnerExceptions)
+                        {
+                            error += e.ToString();
+                        }
+                        var properties = channel.CreateBasicProperties();
+                        properties.Persistent = true;
+                        properties.Type = "fail";
+                        properties.MessageId = subtask.id.ToString();
+                        properties.CorrelationId = ea.BasicProperties.CorrelationId;
 
-                    string a, b;
-                    agent.DockerArr("alpine", new[] { "sh", "-c", "rm -rf wn_out/*" }, out a, out b);
-
-
-                    var properties = channel.CreateBasicProperties();
-                    properties.Persistent = true;
-                    properties.Type = "result";
-                    properties.MessageId = subtask.id.ToString();
-                    properties.CorrelationId = ea.BasicProperties.CorrelationId;
-
-                    channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
-                     body: new TaskResult() { payload = ret, id = subtask.id }.SerializeToByteArray());
-                    state.Globals["init"] = false;
-                    logger.LogInformation("subtask done");
+                        channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
+                         body: new TaskResult()
+                         {
+                             payload = new Dictionary<string, PayloadItem> { ["_error"] = new ObjectPayload() { obj = error as object } as PayloadItem },
+                             id = subtask.id
+                         }.SerializeToByteArray());
+                        state.Globals["init"] = false;
+                        logger.LogError("subtask failed.\n" + error);
+                    }
 
                 }
 
