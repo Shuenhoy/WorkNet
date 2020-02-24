@@ -30,7 +30,7 @@ namespace WorkNet.Agent.Worker
         public static async Task PullImage(this DockerClient client, string name)
         {
             var split = name.Split(':');
-            var image = split.Length == 1 ? split.First() : String.Join("", split.Take(split.Length - 1));
+            var image = split.Length == 1 ? split.First() : String.Join(":", split.Take(split.Length - 1));
             var tag = split.Length > 1 ? split.Last() : "latest";
             Console.WriteLine("try to pull image: " + name);
             await client.Images.CreateImageAsync(new ImagesCreateParameters()
