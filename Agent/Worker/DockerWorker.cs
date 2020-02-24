@@ -251,7 +251,7 @@ namespace WorkNet.Agent.Worker
                     }
                     catch (Exception ae)
                     {
-                        var error = ae.Message;
+                        var error = ae.ToString();
                         var properties = channel.CreateBasicProperties();
                         properties.Persistent = true;
                         properties.Type = "failed";
