@@ -61,6 +61,7 @@ namespace WorkNet.Agent.Worker
                 AttachStderr = true,
                 AttachStdout = true,
                 OpenStdin = true,
+                Tty = true,
                 WorkingDir = workDir,
                 HostConfig = new HostConfig()
                 {
@@ -97,7 +98,6 @@ namespace WorkNet.Agent.Worker
             {
                 AttachStderr = true,
                 AttachStdout = true,
-                AttachStdin = true,
 
                 Cmd = commandTokens
             });
