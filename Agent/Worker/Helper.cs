@@ -97,6 +97,7 @@ namespace WorkNet.Agent.Worker
             {
                 AttachStderr = true,
                 AttachStdout = true,
+                AttachStdin = true,
 
                 Cmd = commandTokens
             });
