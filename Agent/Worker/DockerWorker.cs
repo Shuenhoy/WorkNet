@@ -49,6 +49,7 @@ namespace WorkNet.Agent.Worker
         {
             Task.WaitAll(containers.Values.Map(x => docker.RemoveContainer(x)).ToArray());
             containers.Clear();
+            this.logs.Clear();
         }
         private string getContainer(string image)
         {
@@ -178,7 +179,7 @@ namespace WorkNet.Agent.Worker
                     return a:Format(unpack({...}))
                 end
                 function log(...)
-                    return a:Log(...)
+                    return a:Log(unpack{...})
                 end
                 function run(untrusted_code, env)
                     local untrusted_function, message = load(untrusted_code, nil, 't', env)
