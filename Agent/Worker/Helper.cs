@@ -98,7 +98,6 @@ namespace WorkNet.Agent.Worker
             {
                 AttachStderr = true,
                 AttachStdout = true,
-
                 Cmd = commandTokens
             });
             var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;

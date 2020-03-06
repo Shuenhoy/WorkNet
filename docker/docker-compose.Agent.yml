@@ -1,6 +1,7 @@
 version: '3'
 services: 
   agent:
+    restart: always
     build:
       context: ..
       dockerfile: docker/Agent.DockerFile
