@@ -101,7 +101,6 @@ namespace WorkNet.Agent.Worker
                 Cmd = commandTokens
             });
             var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;
-            var insp = await client.Containers.InspectContainerExecAsync(createdExec.ID);
 
             var task = multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
             if (await Task.WhenAny(task, Task.Delay(AppConfigurationServices.Timeout)) != task)
@@ -110,6 +109,8 @@ namespace WorkNet.Agent.Worker
                 throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
 
             }
+            var insp = await client.Containers.InspectContainerExecAsync(createdExec.ID);
+
             return (task.Result.stdout, task.Result.stderr, insp.ExitCode);
         }
         public static IEnumerable<string> Split(this string str,
