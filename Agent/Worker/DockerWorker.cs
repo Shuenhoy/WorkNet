@@ -26,6 +26,7 @@ namespace WorkNet.Agent.Worker
         Dictionary<string, string> containers;
         string workDir;
         ILogger logger;
+        StringBuilder logs;
 
         public LuaAgent(DockerClient docker, string workDir, ILogger logger)
         {
@@ -33,6 +34,7 @@ namespace WorkNet.Agent.Worker
             this.workDir = workDir;
             this.logger = logger;
             this.containers = new Dictionary<string, string>();
+            this.logs = new StringBuilder();
         }
 
         public FilePair AddFile(string path)
@@ -47,6 +49,7 @@ namespace WorkNet.Agent.Worker
         {
             Task.WaitAll(containers.Values.Map(x => docker.RemoveContainer(x)).ToArray());
             containers.Clear();
+            this.logs.Clear();
         }
         private string getContainer(string image)
         {
@@ -106,6 +109,14 @@ namespace WorkNet.Agent.Worker
             stderr = tsk.Result.stderr;
             logger.LogInformation(stdout);
             return tsk.Result.exitCode;
+        }
+        public void Log(object obj)
+        {
+            logs.AppendLine(obj.ToString());
+        }
+        public string GetLog()
+        {
+            return logs.ToString();
         }
         public FilePair AddPath(string path)
         {
@@ -174,6 +185,9 @@ namespace WorkNet.Agent.Worker
                 function format(...)
                     return a:Format(unpack({...}))
                 end
+                function log(...)
+                    return a:Log(unpack{...})
+                end
                 function run(untrusted_code, env)
                     local untrusted_function, message = load(untrusted_code, nil, 't', env)
                     if not untrusted_function then return nil, message end
@@ -223,7 +237,7 @@ namespace WorkNet.Agent.Worker
                         var raw = state.DoString(
                             @"return run(source, {global = global, 
                                         task = task, file = file, folder = folder, docker_arr = docker_arr,
-                                        docker = docker, format = format, init = init})");
+                                        docker = docker, format = format, log = log, init = init})");
                         if (raw.Tuple[0].Boolean == false)
                         {
                             logger.LogError(raw.Tuple[1].String);
@@ -236,6 +250,7 @@ namespace WorkNet.Agent.Worker
                                     FilePair fp => fp as PayloadItem,
                                     _ => new ObjectPayload() { obj = kv.Value } as PayloadItem
                                 });
+                        ret.Add("_log", new ObjectPayload() { obj = agent.GetLog() as object } as PayloadItem);
 
                         string a, b;
                         agent.DockerArr("alpine", new[] { "sh", "-c", "rm -rf wn_out/*" }, out a, out b);
@@ -258,7 +273,7 @@ namespace WorkNet.Agent.Worker
                     }
                     catch (Exception ae)
                     {
-                        var error = ae.Message;
+                        var error = ae.ToString();
                         var properties = channel.CreateBasicProperties();
                         properties.Persistent = true;
                         properties.Type = "failed";
@@ -268,7 +283,11 @@ namespace WorkNet.Agent.Worker
                         channel.BasicPublish(exchange: "", routingKey: ea.BasicProperties.ReplyTo, basicProperties: properties,
                          body: new TaskResult()
                          {
-                             payload = new Dictionary<string, PayloadItem> { ["_error"] = new ObjectPayload() { obj = error as object } as PayloadItem },
+                             payload = new Dictionary<string, PayloadItem>
+                             {
+                                 ["_error"] = new ObjectPayload() { obj = error as object } as PayloadItem,
+                                 ["_log"] = new ObjectPayload() { obj = agent.GetLog() as object } as PayloadItem
+                             },
                              id = subtask.id
                          }.SerializeToByteArray());
                         state.Globals["init"] = false;

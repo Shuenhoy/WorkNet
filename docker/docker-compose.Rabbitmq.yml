@@ -2,12 +2,13 @@ version: '3'
 
 services:
   rabbitmq:
+    restart: always
     image: rabbitmq:3-management
     networks:
       worknet: {}
     ports:
-      - 15672:15672
-      - 5672:5672
+      - 1672:15672
+      - 2672:5672
     volumes:
       - ./data:/var/lib/rabbitmq
   

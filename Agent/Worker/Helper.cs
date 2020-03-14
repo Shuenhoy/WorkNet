@@ -30,9 +30,8 @@ namespace WorkNet.Agent.Worker
         public static async Task PullImage(this DockerClient client, string name)
         {
             var split = name.Split(':');
-            if (split.Length > 2) throw new Exception("incorrect image format!");
-            var image = split[0];
-            var tag = split.Length > 1 ? split[1] : "latest";
+            var image = split.Length == 1 ? split.First() : String.Join(":", split.Take(split.Length - 1));
+            var tag = split.Length > 1 ? split.Last() : "latest";
             Console.WriteLine("try to pull image: " + name);
             await client.Images.CreateImageAsync(new ImagesCreateParameters()
             {
@@ -62,6 +61,7 @@ namespace WorkNet.Agent.Worker
                 AttachStderr = true,
                 AttachStdout = true,
                 OpenStdin = true,
+                Tty = true,
                 WorkingDir = workDir,
                 HostConfig = new HostConfig()
                 {
@@ -98,7 +98,6 @@ namespace WorkNet.Agent.Worker
             {
                 AttachStderr = true,
                 AttachStdout = true,
-
                 Cmd = commandTokens
             });
             var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;
