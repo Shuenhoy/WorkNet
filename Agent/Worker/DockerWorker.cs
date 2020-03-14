@@ -54,7 +54,14 @@ namespace WorkNet.Agent.Worker
             {
                 if (!containers.ContainsKey(image))
                 {
-                    docker.PullImage(image).Wait();
+                    try
+                    {
+                        docker.PullImage(image).Wait();
+                    }
+                    catch(Exception ee)
+                    {
+                        logger.LogWarning($"Warning: pull {image} failed");
+                    }
                     var c = docker.CreateContainer(image, "/app", new string[]{
                         $"{workDir}/data/pulls:/app/wn_pulls",
                         $"{workDir}/data/out:/app/wn_out",
