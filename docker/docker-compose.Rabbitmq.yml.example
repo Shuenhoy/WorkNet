@@ -7,8 +7,8 @@ services:
     networks:
       worknet: {}
     ports:
-      - 1672:15672
-      - 2672:5672
+      - 15672:15672
+      - 5672:5672
     volumes:
       - ./data:/var/lib/rabbitmq
   

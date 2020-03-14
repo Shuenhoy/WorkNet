@@ -4,3 +4,5 @@ bin/
 obj/
 data/
 tmp/
+docker/docker-compose.dev.yml
+docker/docker-compose.Rabbitmq.yml
