@@ -91,27 +91,49 @@ namespace WorkNet.Agent.Worker
         {
             await client.Containers.WaitContainerAsync(ID);
         }
-        public static async Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(this DockerClient client, string containerId, string[] commandTokens)
+        public static async Task KillProcess(this DockerClient client, string containerId, long pid)
+        {
+            var createdExec = await client.Containers.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
+            {
+
+                Cmd = new[] { "kill", "-9", pid.ToString() }
+            });
+            await client.Containers.StartContainerExecAsync(createdExec.ID);
+        }
+        public static async Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(
+                this DockerClient client, string containerId, string[] commandTokens, int? timeout)
         {
             //await client.Containers.StartAndAttachContainerExecAsync()
             var createdExec = await client.Containers.ExecCreateContainerAsync(containerId, new ContainerExecCreateParameters
             {
                 AttachStderr = true,
                 AttachStdout = true,
+                AttachStdin = false,
+                Tty = false,
                 Cmd = commandTokens
             });
-            var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, false); ;
-
-            var task = multiplexedStream.ReadOutputToEndAsync(CancellationToken.None);
-            if (await Task.WhenAny(task, Task.Delay(AppConfigurationServices.Timeout)) != task)
+            var multiplexedStream = await client.Containers.StartAndAttachContainerExecAsync(createdExec.ID, true);
+            var cancel = new CancellationTokenSource();
+            try
             {
+                var task = multiplexedStream.ReadOutputToEndAsync(cancel.Token);
+                if (await Task.WhenAny(task, Task.Delay(timeout ?? AppConfigurationServices.Timeout)) != task)
+                {
+                    var pid = (await client.Containers.InspectContainerExecAsync(createdExec.ID)).Pid;
+                    await multiplexedStream.WriteAsync(new byte[] { 0x03 }, 0, 1, CancellationToken.None);
 
-                throw new TimeoutException() { Commands = String.Join(" ", commandTokens) };
+                    cancel.Cancel();
+
+                }
+                var insp = await client.Containers.InspectContainerExecAsync(createdExec.ID);
+
+                return (task.Result.stdout, task.Result.stderr, insp.ExitCode);
+            }
+            catch (Exception)
+            {
+                return ("", $"`{String.Join(" ", commandTokens)}` runs into timeout.", -1);
 
             }
-            var insp = await client.Containers.InspectContainerExecAsync(createdExec.ID);
-
-            return (task.Result.stdout, task.Result.stderr, insp.ExitCode);
         }
         public static IEnumerable<string> Split(this string str,
                                             Func<char, bool> controller)
@@ -156,10 +178,10 @@ namespace WorkNet.Agent.Worker
                 .Select(arg => arg.Trim().TrimMatchingQuotes('\"').Replace("\\\"", "\""))
                 .Where(arg => !string.IsNullOrEmpty(arg));
         }
-        public static Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(this DockerClient client, string containerId, string command)
+        public static Task<(string stdout, string stderr, long exitCode)> RunCommandInContainerAsync(this DockerClient client, string containerId, string command, int? timeout)
         {
             var commandTokens = SplitCommandLine(command);
-            return RunCommandInContainerAsync(client, containerId, commandTokens.ToArray());
+            return RunCommandInContainerAsync(client, containerId, commandTokens.ToArray(), timeout);
         }
     }
 }

@@ -27,6 +27,7 @@ namespace WorkNet.Agent.Worker
         string workDir;
         ILogger logger;
         StringBuilder logs;
+        int? timeout;
 
         public LuaAgent(DockerClient docker, string workDir, ILogger logger)
         {
@@ -35,21 +36,30 @@ namespace WorkNet.Agent.Worker
             this.logger = logger;
             this.containers = new Dictionary<string, string>();
             this.logs = new StringBuilder();
+            timeout = null;
         }
 
-        public FilePair AddFile(string path)
+        public object AddFile(string path)
         {
-            return new FilePair()
+            try
             {
-                filename = path,
-                file = new FileBytes(File.ReadAllBytes($"data/out/{path}"))
-            };
+                return new FilePair()
+                {
+                    filename = path,
+                    file = new FileBytes(File.ReadAllBytes($"data/out/{path}"))
+                };
+            }
+            catch (Exception)
+            {
+                return $"file not exists: {path}";
+            }
         }
         internal void cleanup()
         {
             Task.WaitAll(containers.Values.Map(x => docker.RemoveContainer(x)).ToArray());
             containers.Clear();
             this.logs.Clear();
+            timeout = null;
         }
         private string getContainer(string image)
         {
@@ -61,7 +71,7 @@ namespace WorkNet.Agent.Worker
                     {
                         docker.PullImage(image).Wait();
                     }
-                    catch(Exception ee)
+                    catch (Exception ee)
                     {
                         logger.LogWarning($"Warning: pull {image} failed");
                     }
@@ -78,21 +88,33 @@ namespace WorkNet.Agent.Worker
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw e;
+                return null;
             }
         }
+        public void Timeout(int timeout)
+        {
+            this.timeout = timeout;
+        }
+
         public long Docker(string image, string command, out string stdout, out string stderr)
         {
             var container = getContainer(image);
+            if (container == null)
+            {
+                stdout = "";
+                stderr = $"cannot create a container of image `{image}`";
+                return -2;
+            }
             logger.LogInformation($"execute in {container}({image}): {command}");
             var tsk = docker.RunCommandInContainerAsync(container,
-                                        command);
+                                        command, timeout);
             tsk.Wait();
+
             stdout = tsk.Result.stdout;
             stderr = tsk.Result.stderr;
             return tsk.Result.exitCode;
         }
+
         public string Format(string format, Dictionary<string, object> arguments)
         {
             return Smart.Format(format, arguments);
@@ -100,9 +122,15 @@ namespace WorkNet.Agent.Worker
         public long DockerArr(string image, string[] commands, out string stdout, out string stderr)
         {
             var container = getContainer(image);
+            if (container == null)
+            {
+                stdout = "";
+                stderr = $"cannot create a container of image `{image}`";
+                return -2;
+            }
             logger.LogInformation($"execute in {container}({image}): {String.Join(" ", commands)}");
             var tsk = docker.RunCommandInContainerAsync(container,
-                                        commands);
+                                        commands, timeout);
             tsk.Wait();
 
             stdout = tsk.Result.stdout;
@@ -188,6 +216,9 @@ namespace WorkNet.Agent.Worker
                 function log(...)
                     return a:Log(unpack{...})
                 end
+                function timeout(...)
+                    return a:Timeout(unpack{...})
+                end
                 function run(untrusted_code, env)
                     local untrusted_function, message = load(untrusted_code, nil, 't', env)
                     if not untrusted_function then return nil, message end
@@ -237,7 +268,7 @@ namespace WorkNet.Agent.Worker
                         var raw = state.DoString(
                             @"return run(source, {global = global, 
                                         task = task, file = file, folder = folder, docker_arr = docker_arr,
-                                        docker = docker, format = format, log = log, init = init})");
+                                        docker = docker, format = format, log = log, init = init, timeout = timeout, tonumber = tonumber, math = math})");
                         if (raw.Tuple[0].Boolean == false)
                         {
                             logger.LogError(raw.Tuple[1].String);
